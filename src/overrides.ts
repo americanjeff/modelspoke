@@ -255,8 +255,8 @@ export interface DecodedRouteModels {
  * Decode one RAW route's `models` / `overrides` into the in-memory served
  * set (the lenient reader — never throws):
  *
- * - `models` is an array carrying at least one PLAIN OBJECT with a string
- *   `id` → **EXPLICIT**: `models` = the entries in list order (each
+ * - `models` is an array carrying at least one PLAIN OBJECT with a non-empty
+ *   string `id` → **EXPLICIT**: `models` = the entries in list order (each
  *   normalized — a missing `name` defaults to the `id`; non-object elements
  *   skipped). `legacyOverrides` ABSENT — the entries carry the config, and
  *   the stored `overrides` key is dropped on the first explicit write.
@@ -280,8 +280,13 @@ export function decodeRouteModels(route: Record<string, unknown>): DecodedRouteM
   if (!Array.isArray(modelsRaw) || modelsRaw.length === 0) {
     return { models: null, ...(legacy === undefined ? {} : { legacyOverrides: legacy }) };
   }
-  const isEntryElement = (el: unknown): boolean =>
-    isPlainObject(el) && typeof (el as Record<string, unknown>).id === "string";
+  // An entry element must satisfy what normalizeModelEntry actually accepts
+  // (a NON-EMPTY string id): an `id: ""` element is malformed, so an
+  // all-malformed models list degrades to FULL_CATALOG like any other.
+  const isEntryElement = (el: unknown): boolean => {
+    const id = (el as Record<string, unknown>)?.id;
+    return isPlainObject(el) && typeof id === "string" && id.length > 0;
+  };
   if (modelsRaw.some(isEntryElement)) {
     const entries: ModelEntry[] = [];
     for (const el of modelsRaw) {

@@ -110,11 +110,21 @@ export interface ModelspokeAdapterOptions {
  */
 const KEYLESS_SENTINEL = "unused";
 
+/**
+ * How long a successful `/v1/models` catalog stays memoized before the next
+ * resolve re-fetches: a model loaded into the router after the fetch must
+ * show up without a process restart.
+ */
+const DISCOVERY_TTL_MS = 60_000;
+
 export class ModelspokeAdapter extends LlmAdapter {
   private readonly settings: () => unknown;
   private readonly log: (line: string) => void;
   private readonly resolveAttachments?: () => AttachmentReader | undefined;
-  private readonly discovery = new Map<string, Promise<DiscoveryModelInfo[]>>();
+  private readonly discovery = new Map<
+    string,
+    { promise: Promise<DiscoveryModelInfo[]>; at: number }
+  >();
 
   constructor(options: ModelspokeAdapterOptions) {
     super();
@@ -138,19 +148,22 @@ export class ModelspokeAdapter extends LlmAdapter {
 
   /**
    * Memoized `/v1/models` per route identity (baseURL + key env). A failed
-   * fetch is evicted so the next call retries; the memoized promise outlives
-   * any single caller's signal by design.
+   * fetch is evicted so the next call retries; a successful catalog is kept
+   * for DISCOVERY_TTL_MS, after which the next resolve re-fetches. The
+   * memoized promise outlives any single caller's signal by design.
    */
   private discover(route: ModelspokeRoute, signal?: AbortSignal): Promise<DiscoveryModelInfo[]> {
     const key = `${normalizeRouteBaseUrl(route.baseURL)}\u0000${route.apiKeyEnv ?? ""}`;
-    let promise = this.discovery.get(key);
-    if (!promise) {
-      promise = discoverModels(route, signal).catch((error) => {
-        this.discovery.delete(key);
-        throw error;
-      });
-      this.discovery.set(key, promise);
+    const entry = this.discovery.get(key);
+    if (entry && Date.now() - entry.at < DISCOVERY_TTL_MS) {
+      return entry.promise;
     }
+    if (entry) this.discovery.delete(key); // TTL expired — re-fetch
+    const promise = discoverModels(route, signal).catch((error) => {
+      this.discovery.delete(key);
+      throw error;
+    });
+    this.discovery.set(key, { promise, at: Date.now() });
     return promise;
   }
 

@@ -79,20 +79,29 @@ export type {
  * Discovers models for one modelspoke route: GET `{baseURL}/v1/models` and
  * extract the per-model discovery contract.
  *
- * The route's `baseURL` is normalized to end in `/v1`; the Bearer key is read
- * from `process.env[apiKeyEnv]` and sent only when set (local servers usually
- * ignore it).
+ * The route's `baseURL` is normalized to end in `/v1`. The Bearer key is the
+ * caller-resolved `route.apiKey` when present, else `process.env[apiKeyEnv]`
+ * (Node; a runtime without `process.env` resolves to "no key" — a
+ * browser-bundled host should resolve the key itself and pass `apiKey`).
+ * Sent only when set (local servers usually ignore it).
  *
  * @throws {ModelspokeClientError} On network or non-2xx responses / bad JSON.
  */
 export async function discoverModels(
-  route: Pick<ModelspokeRoute, "baseURL"> & { apiKeyEnv?: string },
+  route: Pick<ModelspokeRoute, "baseURL"> & { apiKeyEnv?: string; apiKey?: string },
   signal?: AbortSignal,
 ): Promise<DiscoveryModelInfo[]> {
   const baseUrl = normalizeRouteBaseUrl(route.baseURL);
-  const apiKey = route.apiKeyEnv
-    ? process.env[route.apiKeyEnv] || undefined
-    : undefined;
+  const apiKey =
+    route.apiKey ?? (route.apiKeyEnv ? readApiKeyEnv(route.apiKeyEnv) : undefined);
   const entries = await fetchModels(baseUrl, apiKey, signal);
   return entries.map(extractFromEntry);
+}
+
+/** Browser-safe env read: a runtime without `process.env` yields "no key". */
+function readApiKeyEnv(name: string): string | undefined {
+  if (typeof process === "undefined" || typeof process.env === "undefined") {
+    return undefined;
+  }
+  return process.env[name] || undefined;
 }

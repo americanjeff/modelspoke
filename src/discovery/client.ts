@@ -29,6 +29,11 @@ export class ModelspokeClientError extends Error {
 /**
  * Fetches the model list from an OpenAI-compatible server
  * (`GET {baseUrl}/models`).
+ *
+ * No built-in timeout: a hung request lives as long as the server does
+ * unless the caller passes an `AbortSignal` (the dsh host always does — the
+ * route's signal aborts the fetch).
+ *
  * @param baseUrl - OpenAI API base URL ending in `/v1`.
  * @returns Array of model entries from the `data` field.
  * @throws {ModelspokeClientError} On network or non-2xx responses.
@@ -56,10 +61,10 @@ export async function fetchModels(
   }
 
   if (!response.ok) {
-    const body = await response.text().catch(() => "");
+    const body = await readCappedBody(response, ERROR_BODY_CAP);
     const hint = response.status === 401 ? " Check the route's apiKeyEnv." : "";
     throw new ModelspokeClientError(
-      `Server returned ${response.status} ${response.statusText}${body ? `: ${body.slice(0, 200)}` : ""}${hint}`,
+      `Server returned ${response.status} ${response.statusText}${body ? `: ${body}` : ""}${hint}`,
       response.status,
     );
   }
@@ -76,4 +81,32 @@ export async function fetchModels(
   }
 
   return payload.data;
+}
+
+/** How much of an error body to read into the error message. */
+const ERROR_BODY_CAP = 512;
+
+/**
+ * Read up to `cap` characters of a response body WITHOUT buffering the whole
+ * thing (a broken server can return a huge error body; the previous
+ * `response.text()` read it all before slicing).
+ */
+async function readCappedBody(response: Response, cap: number): Promise<string> {
+  const reader = response.body?.getReader();
+  if (!reader) return "";
+  const decoder = new TextDecoder();
+  let out = "";
+  let received = 0;
+  try {
+    while (received < cap) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      out += decoder.decode(value, { stream: true });
+      received += value.length;
+    }
+    if (received >= cap) void reader.cancel().catch(() => {});
+  } catch {
+    // A read failure just shortens the error hint.
+  }
+  return out.slice(0, cap);
 }

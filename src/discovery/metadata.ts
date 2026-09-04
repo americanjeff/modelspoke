@@ -100,6 +100,9 @@ export function extractInput(entry: OpenAIModelEntry): ModelModality[] | undefin
   }
   if (entry.capabilities?.vision === true) set.add("image");
   if (set.size === 0) return undefined;
+  // A chat endpoint that takes any input takes text: seed it, so the result
+  // never carries `image` without `text`.
+  set.add("text");
   const out: ModelModality[] = [];
   if (set.has("text")) out.push("text");
   if (set.has("image")) out.push("image");
@@ -246,6 +249,17 @@ export function extractToolCalling(entry: OpenAIModelEntry): boolean {
  * server advertised no canonical fields at all (bare servers).
  */
 export function extractFromEntry(entry: OpenAIModelEntry): DiscoveryModelInfo {
+  // Untrusted /v1/models data: a non-object element degrades to a bare row
+  // (a string element keeps its value as the id) — the same posture the
+  // backends apply to their surfaces.
+  const raw: unknown = entry;
+  if (!isPlainObject(raw)) {
+    return {
+      id: typeof raw === "string" && raw.length > 0 ? raw : "",
+      discoveredCanonical: undefined,
+      rawMeta: undefined,
+    };
+  }
   const discovered: CanonicalModelFields = {};
 
   const input = extractInput(entry);

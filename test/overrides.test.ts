@@ -819,6 +819,14 @@ describe("decodeRouteModels (the dual-shape lenient reader)", () => {
   it("new shape: no legacyOverrides (the entries carry the config)", () => {
     expect("legacyOverrides" in decodeRouteModels({ models: [{ id: "a" }] })).toBe(false);
   });
+
+  it("all-malformed elements (empty id / non-object) degrade to FULL_CATALOG, not an explicit empty set", () => {
+    expect(decodeRouteModels({ models: [{ id: "" }] })).toEqual({ models: null });
+    expect(decodeRouteModels({ models: [{ id: "" }, "junk", 42] })).toEqual({ models: null });
+    expect(
+      decodeRouteModels({ models: [{ id: "" }], overrides: { m: { contextWindow: 1 } } }),
+    ).toEqual({ models: null, legacyOverrides: { m: { contextWindow: 1 } } });
+  });
 });
 
 describe("entryOverride (the entry's tier-1)", () => {

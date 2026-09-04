@@ -108,6 +108,14 @@ function isNonEmpty(field: CanonicalField, value: unknown): boolean {
  * Resolve one model through the four tiers. Pure — no I/O; discovery input is
  * passed in (the host adapter fetches it) so the same resolution runs for ids
  * discovery didn't list (adapters may accept unlisted ids).
+ *
+ * **Precondition (tier 1):** `userOverride` must be pre-canonicalized with
+ * `normalizeOverrideEntry` first (both dsh hosts do). The explicit-none
+ * detection runs on the PRE-canonicalized form: a raw
+ * `{ thinkingLevelMap: {} }` from a direct caller is NOT a nothink
+ * declaration (stored empty objects canonicalize to absent) and would
+ * misresolve. Other fields carry no such sharp edge — every tier is
+ * defensively re-canonicalized.
  */
 export function resolveModel(input: ResolveInput): ResolutionResult {
   const tiers: Tier[] = [];

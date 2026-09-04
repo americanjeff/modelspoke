@@ -17,7 +17,15 @@ export function matchPreset(
 ): Preset | undefined {
   const id = modelId.toLowerCase();
   for (const preset of catalog) {
-    if (new RegExp(preset.match, "i").test(id)) {
+    let re: RegExp;
+    try {
+      re = new RegExp(preset.match, "i");
+    } catch {
+      // A malformed pattern in a caller-supplied catalog never matches
+      // (the bundled catalog's patterns are drift-checked to be valid).
+      continue;
+    }
+    if (re.test(id)) {
       return preset;
     }
   }

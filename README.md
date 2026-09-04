@@ -1,3 +1,6 @@
+[![npm version](https://img.shields.io/npm/v/modelspoke)](https://www.npmjs.com/package/modelspoke)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 ![modelspoke logo (dark mode)](assets/logo/bubble-wheel-hollow-3-white-88.png) ![modelspoke logo](assets/logo/bubble-wheel-hollow-3-88.png)
 
 # modelspoke

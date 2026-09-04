@@ -1,8 +1,32 @@
 {
   "name": "modelspoke",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "MIT",
   "description": "Local OpenAI-compatible model-server discovery + tiered reasoning-metadata resolution for DeepSeek Harness (dsh).",
+  "author": "American Jeff <jeff@americanjeff.com>",
+  "homepage": "https://github.com/americanjeff/modelspoke",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/americanjeff/modelspoke.git"
+  },
+  "bugs": {
+    "url": "https://github.com/americanjeff/modelspoke/issues"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "llama-swap",
+    "ollama",
+    "llama-cpp",
+    "llama-server",
+    "vllm",
+    "sglang",
+    "lmstudio",
+    "local-llm",
+    "model-discovery",
+    "reasoning-metadata"
+  ],
   "type": "module",
   "engines": {
     "node": ">=22"
