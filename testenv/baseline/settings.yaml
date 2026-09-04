@@ -1,0 +1,45 @@
+ui-onboarding:
+  welcomeNoticeVersion: 2026-08-13.1
+llm-pi-ai:
+  providers:
+    llama-swap:
+      displayName: llama-swap
+      apiKeyEnv: LLAMA_SWAP_API_KEY
+      api: openai-completions
+      baseURL: http://127.0.0.1:8080/v1
+      reasoning: medium # route default effort; omit to keep provider default
+      compat:
+        supportsDeveloperRole: false
+        supportsReasoningEffort: false
+        thinkingFormat: chat-template
+        chatTemplateKwargs:
+          enable_thinking:
+            $var: thinking.enabled
+          reasoning_effort:
+            $var: thinking.effort
+            omitWhenOff: true
+          preserve_thinking: true
+      models:
+        - id: qwen3.8-27b-6000pro
+          name: qwen3.8-27b
+          contextWindow: 262144
+          maxTokens: 65536 # sglang 400s (no clamp) when input + max_tokens > ctx; leaves ~196K for input
+          reasoningEfforts:
+            off: # offered; sends no effort, enable_thinking=false (true nothink branch)
+            low: low
+            medium: medium
+            xhigh: xhigh
+    ollama:
+      displayName: ollama
+      apiKeyEnv: OLLAMA_API_KEY
+      api: openai-completions
+      baseURL: http://127.0.0.1:11434/v1
+      models:
+        - { id: deepseek-v4-flash:cloud }
+        - { id: kimi-k3:cloud }
+        - { id: glm-5.2:cloud }
+        - { id: deepseek-v4-pro:cloud }
+agent-default-model:
+  provider: llama-swap
+  model: qwen3.8-27b-6000pro
+  reasoningEffort: medium

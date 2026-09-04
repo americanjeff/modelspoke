@@ -1,0 +1,307 @@
+{
+  "corpus": "modelspoke-discovery-conformance",
+  "formatVersion": 1,
+  "backend": "ollama",
+  "fixtures": {
+    "GEMMA4_MAP": {
+      "off": "none",
+      "low": "medium",
+      "medium": "medium",
+      "high": "medium",
+      "xhigh": "medium",
+      "max": "medium"
+    },
+    "DEEPSEEK3_MAP": {
+      "off": "none",
+      "low": "medium",
+      "medium": "medium",
+      "high": "medium",
+      "xhigh": "medium",
+      "max": "medium"
+    },
+    "QWEN35_MAP": {
+      "off": "none",
+      "minimal": null,
+      "low": "low",
+      "medium": "medium",
+      "high": "high",
+      "xhigh": "max",
+      "max": "max"
+    },
+    "GPT_OSS_MAP": {
+      "off": null,
+      "low": "low",
+      "medium": "medium",
+      "high": "high",
+      "xhigh": "max",
+      "max": "high"
+    },
+    "CLOUD_GLM_MAP": {
+      "off": "none",
+      "minimal": null,
+      "low": "low",
+      "medium": "medium",
+      "high": "high",
+      "xhigh": null,
+      "max": "max"
+    },
+    "CLOUD_DEEPSEEK_MAP": {
+      "off": null,
+      "minimal": null,
+      "low": null,
+      "medium": null,
+      "high": null,
+      "xhigh": null,
+      "max": null
+    },
+    "SHOW_GEMMA4_E4B": {
+      "license": "…",
+      "modelfile": "# Modelfile for gemma4:e4b\nFROM /var/lib/ollama/models/blobs/sha256-4c27e0f5\nRENDERER gemma4\nPARSER gemma4\n",
+      "parameters": "num_ctx 4096",
+      "template": "{{ .Prompt }}",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "gemma4",
+        "families": ["gemma4"],
+        "parameter_size": "8.0B",
+        "quantization_level": "Q4_K_M"
+      },
+      "model_info": { "gemma4.context_length": 131072, "gemma4.audio.block_count": 32 },
+      "tensors": {},
+      "capabilities": ["completion", "vision", "audio", "tools", "thinking"],
+      "modified_at": "2026-08-26T21:15:41.77630488-07:00",
+      "requires": "0.20.0"
+    },
+    "SHOW_QWEN3CODER": {
+      "modelfile": "FROM /var/lib/ollama/models/blobs/sha256-30e51a7c\nRENDERER qwen3-coder\nPARSER qwen3-coder\n",
+      "details": {
+        "parent_model": "qwen3-coder-next:latest",
+        "format": "gguf",
+        "family": "qwen3next",
+        "parameter_size": "79.7B",
+        "quantization_level": "Q4_K_M"
+      },
+      "model_info": { "general.architecture": "qwen3next", "qwen3next.context_length": 262144 },
+      "capabilities": ["completion", "tools"],
+      "requires": "0.15.5"
+    },
+    "SHOW_GLM_CLOUD": {
+      "details": {
+        "parent_model": "glm-5.2",
+        "format": "",
+        "family": "glm5.2",
+        "families": null,
+        "parameter_size": "756162687872",
+        "quantization_level": ""
+      },
+      "model_info": { "glm5.2.context_length": 1048576 },
+      "capabilities": ["thinking", "completion", "tools"],
+      "modified_at": "2026-06-17T10:49:28.229382558-07:00"
+    },
+    "SHOW_DEEPSEEK_CLOUD": {
+      "details": { "parent_model": "deepseek-v4-flash", "format": "", "family": "deepseek4" },
+      "model_info": { "deepseek4.context_length": 1048576 },
+      "capabilities": ["completion", "tools", "thinking"]
+    },
+    "SHOW_QWEN35_CLOUD": {
+      "details": { "parent_model": "qwen3.5", "format": "", "family": "qwen3.5" },
+      "model_info": { "qwen3.5.context_length": 262144 },
+      "capabilities": ["completion", "tools", "thinking", "vision"]
+    },
+    "SHOW_GEMMA4_REMANIFESTED": {
+      "details": {
+        "parent_model": "gemma4:31b",
+        "format": "",
+        "family": "gemma4",
+        "families": null,
+        "parameter_size": "32682372656",
+        "quantization_level": "BF16"
+      },
+      "model_info": { "gemma4.context_length": 262144, "general.architecture": "gemma4" },
+      "capabilities": ["completion", "thinking", "tools", "vision"],
+      "modified_at": "2026-08-26T21:15:41.77630488-07:00"
+    },
+    "SHOW_GEMMA4_DECOYS": {
+      "license": "…",
+      "modelfile": "# Modelfile for gemma4:e4b\nFROM /var/lib/ollama/models/blobs/sha256-4c27e0f5\nRENDERER gemma4\nPARSER gemma4\n",
+      "parameters": "num_ctx 4096\nnum_predict 512",
+      "template": "{{ .Prompt }}",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "gemma4",
+        "families": ["gemma4"],
+        "parameter_size": "8.0B",
+        "quantization_level": "Q4_K_M"
+      },
+      "model_info": { "gemma4.context_length": 131072, "gemma4.audio.block_count": 32 },
+      "tensors": {},
+      "capabilities": ["completion", "vision", "audio", "tools", "thinking"],
+      "modified_at": "2026-08-26T21:15:41.77630488-07:00",
+      "requires": "0.20.0",
+      "max_tokens": 65536,
+      "compat": { "supportsReasoningEffort": true }
+    },
+    "SHOW_GLM_REMOTE_HOST": {
+      "details": {
+        "parent_model": "glm-5.2",
+        "format": "",
+        "family": "glm5.2",
+        "families": null,
+        "parameter_size": "756162687872",
+        "quantization_level": "",
+        "remote_host": "https://ollama.com"
+      },
+      "model_info": { "glm5.2.context_length": 1048576 },
+      "capabilities": ["thinking", "completion", "tools"],
+      "modified_at": "2026-06-17T10:49:28.229382558-07:00"
+    },
+    "SHOW_GEMMA4_NOTHINK": {
+      "license": "…",
+      "modelfile": "# Modelfile for gemma4:e4b\nFROM /var/lib/ollama/models/blobs/sha256-4c27e0f5\nRENDERER gemma4\nPARSER gemma4\n",
+      "parameters": "num_ctx 4096",
+      "template": "{{ .Prompt }}",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "gemma4",
+        "families": ["gemma4"],
+        "parameter_size": "8.0B",
+        "quantization_level": "Q4_K_M"
+      },
+      "model_info": { "gemma4.context_length": 131072, "gemma4.audio.block_count": 32 },
+      "tensors": {},
+      "capabilities": ["completion", "vision", "tools"],
+      "modified_at": "2026-08-26T21:15:41.77630488-07:00",
+      "requires": "0.20.0"
+    },
+    "ENTRIES": [
+      { "id": "gemma4:e4b", "object": "model", "created": 1, "owned_by": "library" },
+      { "id": "qwen3-coder-200k:latest", "object": "model", "created": 2, "owned_by": "library" },
+      { "id": "glm-5.2:cloud", "object": "model", "created": 3, "owned_by": "library" }
+    ],
+    "ENTRIES_GEMMA_QWEN": [
+      { "id": "gemma4:e4b", "object": "model", "created": 1, "owned_by": "library" },
+      { "id": "qwen3-coder-200k:latest", "object": "model", "created": 2, "owned_by": "library" }
+    ],
+    "META_ENTRY": {
+      "id": "gemma4:e4b",
+      "context_length": 4096,
+      "meta": { "llamaswap": { "reasoning": true } }
+    }
+  },
+  "vectors": [
+    { "id": "familyLookup/parser-gemma4", "op": "ollama.familyLookup", "input": { "parser": "gemma4", "isCloud": false }, "expect": { "eq": "$GEMMA4_MAP" } },
+    { "id": "familyLookup/parser-deepseek3", "op": "ollama.familyLookup", "input": { "parser": "deepseek3", "isCloud": false }, "expect": { "eq": "$DEEPSEEK3_MAP" } },
+    { "id": "familyLookup/parser-qwen35", "op": "ollama.familyLookup", "input": { "parser": "qwen3.5", "isCloud": false }, "expect": { "eq": "$QWEN35_MAP" } },
+    { "id": "familyLookup/parser-qwen38", "op": "ollama.familyLookup", "input": { "parser": "qwen3.8", "isCloud": false }, "expect": { "eq": "$QWEN35_MAP" } },
+    { "id": "familyLookup/parser-gpt-oss", "op": "ollama.familyLookup", "input": { "parser": "gpt-oss", "isCloud": false }, "expect": { "eq": "$GPT_OSS_MAP" } },
+    { "id": "familyLookup/parser-gptoss-spelled-both-ways", "op": "ollama.familyLookup", "input": { "parser": "gptoss", "isCloud": false }, "expect": { "eq": "$GPT_OSS_MAP" } },
+    { "id": "familyLookup/family-fallback-gemma4", "op": "ollama.familyLookup", "input": { "family": "gemma4", "isCloud": false }, "expect": { "eq": "$GEMMA4_MAP" } },
+    { "id": "familyLookup/family-fallback-gptoss", "op": "ollama.familyLookup", "input": { "family": "gptoss", "isCloud": false }, "expect": { "eq": "$GPT_OSS_MAP" } },
+    { "id": "familyLookup/family-fallback-gpt-oss", "op": "ollama.familyLookup", "input": { "family": "gpt-oss", "isCloud": false }, "expect": { "eq": "$GPT_OSS_MAP" } },
+    { "id": "familyLookup/parser-over-family", "op": "ollama.familyLookup", "input": { "parser": "gemma4", "family": "qwen3next", "isCloud": false }, "expect": { "eq": "$GEMMA4_MAP" } },
+    { "id": "familyLookup/unknown-qwen3-coder", "op": "ollama.familyLookup", "input": { "parser": "qwen3-coder", "family": "qwen3next", "isCloud": false }, "expect": { "eq": null } },
+    { "id": "familyLookup/unknown-kimi", "op": "ollama.familyLookup", "input": { "family": "kimi", "isCloud": false }, "expect": { "eq": null } },
+    { "id": "familyLookup/unknown-llama", "op": "ollama.familyLookup", "input": { "family": "llama", "isCloud": false }, "expect": { "eq": null } },
+    { "id": "familyLookup/unknown-gemma3", "op": "ollama.familyLookup", "input": { "family": "gemma3", "isCloud": false }, "expect": { "eq": null } },
+    { "id": "familyLookup/unknown-absent", "op": "ollama.familyLookup", "input": { "isCloud": false }, "expect": { "eq": null } },
+    { "id": "familyLookup/cloud-glm", "op": "ollama.familyLookup", "input": { "family": "glm", "isCloud": true }, "expect": { "eq": "$CLOUD_GLM_MAP" } },
+    { "id": "familyLookup/cloud-glm52", "op": "ollama.familyLookup", "input": { "family": "glm5.2", "isCloud": true }, "expect": { "eq": "$CLOUD_GLM_MAP" } },
+    { "id": "familyLookup/cloud-glm5-next", "op": "ollama.familyLookup", "input": { "family": "glm5_next", "isCloud": true }, "expect": { "eq": "$CLOUD_GLM_MAP" } },
+    { "id": "familyLookup/cloud-deepseek4", "op": "ollama.familyLookup", "input": { "family": "deepseek4", "isCloud": true }, "expect": { "eq": "$CLOUD_DEEPSEEK_MAP" } },
+    { "id": "familyLookup/cloud-deepseek-prefix", "op": "ollama.familyLookup", "input": { "family": "deepseek", "isCloud": true }, "expect": { "eq": "$CLOUD_DEEPSEEK_MAP" } },
+    { "id": "familyLookup/cloud-unlisted-local-family", "op": "ollama.familyLookup", "input": { "family": "qwen3.5", "isCloud": true }, "expect": { "eq": null } },
+    { "id": "familyLookup/cloud-unlisted-parser-wins-not", "op": "ollama.familyLookup", "input": { "parser": "qwen3.8", "family": "qwen3.5", "isCloud": true }, "expect": { "eq": null } },
+    { "id": "familyLookup/cloud-unlisted-kimi-k3", "op": "ollama.familyLookup", "input": { "family": "kimi-k3", "isCloud": true }, "expect": { "eq": null } },
+    { "id": "familyLookup/cloud-unlisted-minimax", "op": "ollama.familyLookup", "input": { "family": "minimax-m3", "isCloud": true }, "expect": { "eq": null } },
+    { "id": "familyLookup/cloud-absent-family", "op": "ollama.familyLookup", "input": { "isCloud": true }, "expect": { "eq": null } },
+
+    { "id": "modelfileParser/gemma4", "op": "ollama.modelfileParser", "input": { "show": "$SHOW_GEMMA4_E4B" }, "expect": { "eq": "gemma4" } },
+    { "id": "modelfileParser/qwen3-coder", "op": "ollama.modelfileParser", "input": { "show": "$SHOW_QWEN3CODER" }, "expect": { "eq": "qwen3-coder" } },
+    { "id": "modelfileParser/absent-undefined", "op": "ollama.modelfileParser", "input": { "show": "$SHOW_GLM_CLOUD" }, "expect": { "eq": null } },
+    { "id": "modelfileParser/non-string-modelfile", "op": "ollama.modelfileParser", "input": { "show": { "modelfile": 42 } }, "expect": { "eq": null } },
+    { "id": "modelfileParser/absent-modelfile", "op": "ollama.modelfileParser", "input": { "show": {} }, "expect": { "eq": null } },
+
+    { "id": "showToCanonical/full-local-thinking", "op": "ollama.showToCanonical", "input": { "id": "gemma4:e4b", "show": "$SHOW_GEMMA4_E4B", "serverVersion": "0.32.15" }, "expect": { "fields": { "gated": { "falsy": true }, "discoveredCanonical": { "reasoning": true, "input": ["text", "image"], "contextWindow": 131072, "thinkingLevelMap": "$GEMMA4_MAP" } } } },
+    { "id": "showToCanonical/never-emits-decoys", "op": "ollama.showToCanonical", "input": { "id": "gemma4:e4b", "show": "$SHOW_GEMMA4_DECOYS" }, "expect": { "fields": { "discoveredCanonical": { "defined": true }, "discoveredCanonical.maxTokens": null, "discoveredCanonical.compat": null } } },
+    { "id": "showToCanonical/non-thinking", "op": "ollama.showToCanonical", "input": { "id": "qwen3-coder-200k:latest", "show": "$SHOW_QWEN3CODER", "serverVersion": "0.32.15" }, "expect": { "fields": { "discoveredCanonical": { "contextWindow": 262144 } } } },
+    { "id": "showToCanonical/no-vision-no-input", "op": "ollama.showToCanonical", "input": { "id": "glm-5.2:cloud", "show": "$SHOW_GLM_CLOUD" }, "expect": { "fields": { "discoveredCanonical.reasoning": true, "discoveredCanonical.input": null } } },
+    { "id": "showToCanonical/coerce-digit-string-ctx", "op": "ollama.showToCanonical", "input": { "id": "m", "show": { "details": { "family": "gemma4" }, "capabilities": [], "model_info": { "gemma4.context_length": "262144" } } }, "expect": { "fields": { "discoveredCanonical.contextWindow": 262144 } } },
+    { "id": "showToCanonical/coerce-bad-0", "op": "ollama.showToCanonical", "input": { "id": "m", "show": { "details": { "family": "gemma4" }, "capabilities": [], "model_info": { "gemma4.context_length": 0 } } }, "expect": { "fields": { "discoveredCanonical": null } } },
+    { "id": "showToCanonical/coerce-bad-negative", "op": "ollama.showToCanonical", "input": { "id": "m", "show": { "details": { "family": "gemma4" }, "capabilities": [], "model_info": { "gemma4.context_length": -1 } } }, "expect": { "fields": { "discoveredCanonical": null } } },
+    { "id": "showToCanonical/coerce-bad-float", "op": "ollama.showToCanonical", "input": { "id": "m", "show": { "details": { "family": "gemma4" }, "capabilities": [], "model_info": { "gemma4.context_length": 8.5 } } }, "expect": { "fields": { "discoveredCanonical": null } } },
+    { "id": "showToCanonical/coerce-bad-string", "op": "ollama.showToCanonical", "input": { "id": "m", "show": { "details": { "family": "gemma4" }, "capabilities": [], "model_info": { "gemma4.context_length": "abc" } } }, "expect": { "fields": { "discoveredCanonical": null } } },
+    { "id": "showToCanonical/coerce-bad-null", "op": "ollama.showToCanonical", "input": { "id": "m", "show": { "details": { "family": "gemma4" }, "capabilities": [], "model_info": { "gemma4.context_length": null } } }, "expect": { "fields": { "discoveredCanonical": null } } },
+    { "id": "showToCanonical/coerce-bad-true", "op": "ollama.showToCanonical", "input": { "id": "m", "show": { "details": { "family": "gemma4" }, "capabilities": [], "model_info": { "gemma4.context_length": true } } }, "expect": { "fields": { "discoveredCanonical": null } } },
+    { "id": "showToCanonical/no-family-no-ctx", "op": "ollama.showToCanonical", "input": { "id": "m", "show": { "details": {}, "model_info": { "gemma4.context_length": 131072 }, "capabilities": [] } }, "expect": { "fields": { "discoveredCanonical": null } } },
+    { "id": "showToCanonical/fail-soft-empty-show", "op": "ollama.showToCanonical", "input": { "id": "m", "show": {} }, "expect": { "fields": { "discoveredCanonical": null } } },
+    { "id": "showToCanonical/fail-soft-string-capabilities", "op": "ollama.showToCanonical", "input": { "id": "m", "show": { "capabilities": "thinking" } }, "expect": { "fields": { "discoveredCanonical": null } } },
+    { "id": "showToCanonical/fail-soft-junk-degrades-per-field", "op": "ollama.showToCanonical", "input": { "id": "m", "show": { "capabilities": [42, null, "thinking"], "details": 7, "model_info": [] } }, "expect": { "fields": { "discoveredCanonical": { "reasoning": true } } } },
+    { "id": "showToCanonical/think-gate-no-map", "op": "ollama.showToCanonical", "input": { "id": "gemma4-nothink:8b", "show": "$SHOW_GEMMA4_NOTHINK" }, "expect": { "fields": { "discoveredCanonical": { "input": ["text", "image"], "contextWindow": 131072 }, "discoveredCanonical.thinkingLevelMap": null } } },
+    { "id": "showToCanonical/cloud-glm-suffix", "op": "ollama.showToCanonical", "input": { "id": "glm-5.2:cloud", "show": "$SHOW_GLM_CLOUD", "serverVersion": "0.32.15" }, "expect": { "fields": { "gated": { "falsy": true }, "discoveredCanonical": { "reasoning": true, "contextWindow": 1048576, "thinkingLevelMap": "$CLOUD_GLM_MAP" } } } },
+    { "id": "showToCanonical/cloud-remote-host-provenance", "op": "ollama.showToCanonical", "input": { "id": "glm-5.2", "show": "$SHOW_GLM_REMOTE_HOST" }, "expect": { "fields": { "discoveredCanonical.thinkingLevelMap": "$CLOUD_GLM_MAP" } } },
+    { "id": "showToCanonical/cloud-deepseek-all-null", "op": "ollama.showToCanonical", "input": { "id": "deepseek-v4-flash:cloud", "show": "$SHOW_DEEPSEEK_CLOUD" }, "expect": { "fields": { "discoveredCanonical": { "reasoning": true, "contextWindow": 1048576, "thinkingLevelMap": "$CLOUD_DEEPSEEK_MAP" } } } },
+    { "id": "showToCanonical/cloud-unlisted-family", "op": "ollama.showToCanonical", "input": { "id": "qwen3.5:cloud", "show": "$SHOW_QWEN35_CLOUD" }, "expect": { "fields": { "discoveredCanonical.reasoning": true, "discoveredCanonical.contextWindow": 262144, "discoveredCanonical.thinkingLevelMap": null } } },
+    { "id": "showToCanonical/dash-cloud-suffix-is-local", "op": "ollama.showToCanonical", "input": { "id": "gemma4:31b-cloud", "show": "$SHOW_GEMMA4_REMANIFESTED" }, "expect": { "fields": { "discoveredCanonical": { "reasoning": true, "input": ["text", "image"], "contextWindow": 262144, "thinkingLevelMap": "$GEMMA4_MAP" } } } },
+    { "id": "showToCanonical/gate-below-requires", "op": "ollama.showToCanonical", "input": { "id": "gemma4:e4b", "show": "$SHOW_GEMMA4_E4B", "serverVersion": "0.15.5" }, "expect": { "fields": { "gated": true, "discoveredCanonical": { "reasoning": true, "input": ["text", "image"], "contextWindow": 131072 } } } },
+    { "id": "showToCanonical/gate-at-or-above", "op": "ollama.showToCanonical", "input": { "id": "gemma4:e4b", "show": "$SHOW_GEMMA4_E4B", "serverVersion": "0.32.15" }, "expect": { "fields": { "gated": { "falsy": true } } } },
+    { "id": "showToCanonical/gate-no-requires", "op": "ollama.showToCanonical", "input": { "id": "glm-5.2:cloud", "show": "$SHOW_GLM_CLOUD" }, "expect": { "fields": { "gated": { "falsy": true } } } },
+
+    { "id": "versionGate/below-server", "op": "ollama.versionGate", "input": { "requires": "0.20.0", "serverVersion": "0.32.15" }, "expect": { "eq": false } },
+    { "id": "versionGate/equal", "op": "ollama.versionGate", "input": { "requires": "0.20.0", "serverVersion": "0.20.0" }, "expect": { "eq": false } },
+    { "id": "versionGate/patch-above", "op": "ollama.versionGate", "input": { "requires": "0.20.0", "serverVersion": "0.20.1" }, "expect": { "eq": false } },
+    { "id": "versionGate/below-patch", "op": "ollama.versionGate", "input": { "requires": "0.20.0", "serverVersion": "0.15.5" }, "expect": { "eq": true } },
+    { "id": "versionGate/below-patch-2", "op": "ollama.versionGate", "input": { "requires": "0.32.15", "serverVersion": "0.32.14" }, "expect": { "eq": true } },
+    { "id": "versionGate/below-segment-2", "op": "ollama.versionGate", "input": { "requires": "0.32.15", "serverVersion": "0.9.9" }, "expect": { "eq": true } },
+    { "id": "versionGate/major-above-server", "op": "ollama.versionGate", "input": { "requires": "1.0", "serverVersion": "0.32.15" }, "expect": { "eq": true } },
+    { "id": "versionGate/server-major-above", "op": "ollama.versionGate", "input": { "requires": "0.20.0", "serverVersion": "1.0" }, "expect": { "eq": false } },
+    { "id": "versionGate/missing-segments-are-zero", "op": "ollama.versionGate", "input": { "requires": "0.20", "serverVersion": "0.20.0" }, "expect": { "eq": false } },
+    { "id": "versionGate/no-requires", "op": "ollama.versionGate", "input": { "serverVersion": "0.32.15" }, "expect": { "eq": false } },
+    { "id": "versionGate/no-server-version", "op": "ollama.versionGate", "input": { "requires": "0.20.0" }, "expect": { "eq": false } },
+    { "id": "versionGate/non-numeric-requires", "op": "ollama.versionGate", "input": { "requires": "abc", "serverVersion": "0.32.15" }, "expect": { "eq": false } },
+    { "id": "versionGate/non-numeric-server", "op": "ollama.versionGate", "input": { "requires": "0.20.0", "serverVersion": "0.32.x" }, "expect": { "eq": false } },
+    { "id": "versionGate/number-requires", "op": "ollama.versionGate", "input": { "requires": 42, "serverVersion": "0.32.15" }, "expect": { "eq": false } },
+    { "id": "versionGate/empty-requires", "op": "ollama.versionGate", "input": { "requires": "", "serverVersion": "0.32.15" }, "expect": { "eq": false } },
+
+    { "id": "origin/strips-trailing-v1", "op": "ollama.origin", "input": { "base": "http://127.0.0.1:11434/v1" }, "expect": { "eq": "http://127.0.0.1:11434" } },
+    { "id": "origin/strips-trailing-v1-slash", "op": "ollama.origin", "input": { "base": "http://127.0.0.1:11434/v1/" }, "expect": { "eq": "http://127.0.0.1:11434" } },
+    { "id": "origin/strips-api-v1", "op": "ollama.origin", "input": { "base": "http://host/api/v1" }, "expect": { "eq": "http://host/api" } },
+    { "id": "origin/strips-only-one-v1", "op": "ollama.origin", "input": { "base": "http://host/v1/v1" }, "expect": { "eq": "http://host/v1" } },
+    { "id": "origin/no-v1-passthrough", "op": "ollama.origin", "input": { "base": "http://127.0.0.1:11434" }, "expect": { "eq": "http://127.0.0.1:11434" } },
+    { "id": "origin/no-v1-slash-stripped", "op": "ollama.origin", "input": { "base": "http://127.0.0.1:11434/" }, "expect": { "eq": "http://127.0.0.1:11434" } },
+
+    { "id": "probeVersion/get-and-parse", "op": "ollama.probeVersion", "input": { "origin": "http://127.0.0.1:11434" }, "fetch": [{ "when": { "pathSuffix": "/api/version" }, "reply": { "json": { "version": "0.32.15" } } }], "expect": { "eq": { "isOllama": true, "version": "0.32.15" }, "calls": [{ "url": "http://127.0.0.1:11434/api/version" }] } },
+    { "id": "probeVersion/multi-segment-verbatim", "op": "ollama.probeVersion", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/api/version" }, "reply": { "json": { "version": "0.6.12.3" } } }], "expect": { "eq": { "isOllama": true, "version": "0.6.12.3" } } },
+    { "id": "probeVersion/shape-not-dotted", "op": "ollama.probeVersion", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/api/version" }, "reply": { "json": { "version": "not-dotted" } } }], "expect": { "eq": { "isOllama": false } } },
+    { "id": "probeVersion/shape-non-numeric-segment", "op": "ollama.probeVersion", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/api/version" }, "reply": { "json": { "version": "0.32.x" } } }], "expect": { "eq": { "isOllama": false } } },
+    { "id": "probeVersion/shape-number", "op": "ollama.probeVersion", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/api/version" }, "reply": { "json": { "version": 42 } } }], "expect": { "eq": { "isOllama": false } } },
+    { "id": "probeVersion/shape-missing", "op": "ollama.probeVersion", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/api/version" }, "reply": { "json": {} } }], "expect": { "eq": { "isOllama": false } } },
+    { "id": "probeVersion/shape-wrong-key", "op": "ollama.probeVersion", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/api/version" }, "reply": { "json": { "v": "0.32.15" } } }], "expect": { "eq": { "isOllama": false } } },
+    { "id": "probeVersion/shape-array", "op": "ollama.probeVersion", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/api/version" }, "reply": { "json": [] } }], "expect": { "eq": { "isOllama": false } } },
+    { "id": "probeVersion/404-definitive", "op": "ollama.probeVersion", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/api/version" }, "reply": { "status": 404, "text": "nope" } }], "expect": { "eq": { "isOllama": false } } },
+    { "id": "probeVersion/non-json-200-definitive", "op": "ollama.probeVersion", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/api/version" }, "reply": { "text": "{ not json" } }], "expect": { "eq": { "isOllama": false } } },
+    { "id": "probeVersion/network-inconclusive", "op": "ollama.probeVersion", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/api/version" }, "reply": { "throw": "network" } }], "expect": { "eq": { "isOllama": false, "inconclusive": true } } },
+    { "id": "probeVersion/abort-inconclusive", "op": "ollama.probeVersion", "input": { "origin": "http://h:1", "signal": "preaborted" }, "fetch": [{ "when": { "pathSuffix": "/api/version" }, "reply": { "throw": "abort" } }], "expect": { "fields": { "isOllama": false, "inconclusive": true } } },
+
+    { "id": "show/post-and-parse", "op": "ollama.show", "input": { "origin": "http://127.0.0.1:11434", "id": "gemma4:e4b" }, "fetch": [{ "when": { "pathSuffix": "/api/show" }, "reply": { "json": "$SHOW_GEMMA4_E4B" } }], "expect": { "eq": "$SHOW_GEMMA4_E4B", "calls": [{ "url": "http://127.0.0.1:11434/api/show", "method": "POST", "headers": { "Content-Type": "application/json" }, "bodyJson": { "model": "gemma4:e4b" } }] } },
+    { "id": "show/404-undefined", "op": "ollama.show", "input": { "origin": "http://h:1", "id": "nonexistent:latest" }, "fetch": [{ "when": { "pathSuffix": "/api/show" }, "reply": { "status": 404, "json": { "error": "model 'nonexistent:latest' not found" } } }], "expect": { "eq": null } },
+    { "id": "show/network-undefined", "op": "ollama.show", "input": { "origin": "http://h:1", "id": "m" }, "fetch": [{ "when": { "pathSuffix": "/api/show" }, "reply": { "throw": "network" } }], "expect": { "eq": null } },
+    { "id": "show/broken-json-undefined", "op": "ollama.show", "input": { "origin": "http://h:1", "id": "m" }, "fetch": [{ "when": { "pathSuffix": "/api/show" }, "reply": { "text": "{ broken" } }], "expect": { "eq": null } },
+    { "id": "show/array-body-undefined", "op": "ollama.show", "input": { "origin": "http://h:1", "id": "m" }, "fetch": [{ "when": { "pathSuffix": "/api/show" }, "reply": { "json": [1, 2] } }], "expect": { "eq": null } },
+    { "id": "show/string-body-undefined", "op": "ollama.show", "input": { "origin": "http://h:1", "id": "m" }, "fetch": [{ "when": { "pathSuffix": "/api/show" }, "reply": { "json": "ok" } }], "expect": { "eq": null } },
+
+    { "id": "showBatch/fail-soft-omits-failed", "op": "ollama.showBatch", "input": { "origin": "http://h:1", "ids": ["a", "bad", "c"] }, "fetch": [{ "when": { "pathSuffix": "/api/show", "bodyJson": { "model": "bad" } }, "reply": { "status": 500, "json": {} } }, { "when": { "pathSuffix": "/api/show" }, "reply": { "json": { "capabilities": [] } } }], "expect": { "byIdKeys": ["a", "c"] } },
+    { "id": "showBatch/empty-ids-empty-map", "op": "ollama.showBatch", "input": { "origin": "http://h:1", "ids": [] }, "fetch": [{ "when": { "pathSuffix": "/api/show" }, "reply": { "json": {} } }], "expect": { "byIdSize": 0 } },
+
+    { "id": "metadataRows/entry-order-full", "op": "ollama.metadataRows", "input": { "entries": "$ENTRIES", "shows": { "gemma4:e4b": "$SHOW_GEMMA4_E4B", "qwen3-coder-200k:latest": "$SHOW_QWEN3CODER", "glm-5.2:cloud": "$SHOW_GLM_CLOUD" }, "serverVersion": "0.32.15" }, "expect": { "gated": [], "rows": [ { "id": "gemma4:e4b", "discoveredCanonical": { "reasoning": true, "input": ["text", "image"], "contextWindow": 131072, "thinkingLevelMap": "$GEMMA4_MAP" } }, { "id": "qwen3-coder-200k:latest", "discoveredCanonical": { "contextWindow": 262144 } }, { "id": "glm-5.2:cloud", "discoveredCanonical": { "reasoning": true, "contextWindow": 1048576, "thinkingLevelMap": "$CLOUD_GLM_MAP" } } ] } },
+    { "id": "metadataRows/failed-show-generic-fallback", "op": "ollama.metadataRows", "input": { "entries": "$ENTRIES", "shows": { "gemma4:e4b": "$SHOW_GEMMA4_E4B" } }, "expect": { "fields": { "rows.1": { "id": "qwen3-coder-200k:latest" }, "rows.0.discoveredCanonical": { "defined": true }, "rows.2": { "id": "glm-5.2:cloud" } } } },
+    { "id": "metadataRows/generic-fallback-llamaswap-meta", "op": "ollama.metadataRows", "input": { "entries": ["$META_ENTRY"], "shows": {} }, "expect": { "rows": [ { "id": "gemma4:e4b", "discoveredCanonical": { "reasoning": true, "contextWindow": 4096 } } ] } },
+    { "id": "metadataRows/gated-ids", "op": "ollama.metadataRows", "input": { "entries": "$ENTRIES_GEMMA_QWEN", "shows": { "gemma4:e4b": "$SHOW_GEMMA4_E4B", "qwen3-coder-200k:latest": "$SHOW_QWEN3CODER" }, "serverVersion": "0.15.5" }, "expect": { "gated": ["gemma4:e4b"], "fields": { "rows.0.discoveredCanonical.thinkingLevelMap": null, "rows.0.discoveredCanonical.reasoning": true, "rows.0.discoveredCanonical.contextWindow": 131072 } } },
+
+    { "id": "detect/guard-meta-llamaswap-zero-fetches", "op": "ollama.detect", "input": { "baseUrl": "http://127.0.0.1:8080/v1", "entries": [{ "id": "m", "object": "model", "created": 1, "meta": { "llamaswap": { "type": "model" }, "n_ctx": 4096 } }] }, "fetch": [{ "when": { "pathSuffix": "/api/version" }, "reply": { "json": { "version": "0.32.15" } } }], "expect": { "eq": { "match": false }, "fetchCount": 0 } },
+    { "id": "detect/guard-owned-by-llama-swap", "op": "ollama.detect", "input": { "baseUrl": "http://127.0.0.1:8080/v1", "entries": [{ "id": "m", "object": "model", "created": 1, "owned_by": "llama-swap" }] }, "fetch": [{ "when": { "pathSuffix": "/api/version" }, "reply": { "json": { "version": "0.32.15" } } }], "expect": { "eq": { "match": false }, "fetchCount": 0 } },
+    { "id": "detect/bare-catalog-still-probes-and-matches", "op": "ollama.detect", "input": { "baseUrl": "http://127.0.0.1:8080/v1", "entries": [{ "id": "m", "object": "model", "created": 1 }] }, "fetch": [{ "when": { "pathSuffix": "/api/version" }, "reply": { "json": { "version": "0.32.15" } } }], "expect": { "fields": { "match": true, "facts": { "version": "0.32.15" } }, "fetchCount": 1 } }
+  ]
+}

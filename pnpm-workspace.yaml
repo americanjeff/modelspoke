@@ -1,0 +1,5 @@
+# Transitive dev-only deps (pi-ai → @google/genai → protobufjs); type-only
+# use, their install scripts are not needed.
+allowBuilds:
+  '@google/genai': false
+  protobufjs: false

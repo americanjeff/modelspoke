@@ -1,0 +1,461 @@
+{
+  "corpus": "modelspoke-discovery-conformance",
+  "formatVersion": 1,
+  "backend": "llamacpp",
+  "fixtures": {
+    "GGUF_META": {
+      "vocab_type": 2,
+      "n_vocab": 128256,
+      "n_ctx": 4096,
+      "n_ctx_train": 131072,
+      "n_embd": 4096,
+      "n_params": 8030261312,
+      "size": 4912898304,
+      "ftype": 15
+    },
+    "LLAMACPP_OWNED_ENTRY": {
+      "id": "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+      "object": "model",
+      "created": 1735142223,
+      "owned_by": "llamacpp",
+      "meta": "$GGUF_META"
+    },
+    "GGUF_META_ONLY_ENTRY": {
+      "id": "qwen3.8-8b-Q4_K_M.gguf",
+      "object": "model",
+      "created": 1735142223,
+      "owned_by": "owner",
+      "meta": "$GGUF_META"
+    },
+    "BARE_ENTRY": {
+      "id": "gemma-4-E4B-it",
+      "object": "model",
+      "created": 1735142223,
+      "owned_by": "library"
+    },
+    "LLAMA_SWAP_ENTRY": {
+      "id": "gemma-4-E4B-it",
+      "object": "model",
+      "created": 1735142223,
+      "owned_by": "llama-swap",
+      "context_length": 4096,
+      "architecture": { "input_modalities": ["text"], "modality": "text->text", "output_modalities": ["text"] },
+      "meta": { "llamaswap": { "type": "model", "reasoning": true }, "n_ctx": 4096 },
+      "status": { "value": "unloaded" }
+    },
+    "ENTRY_TRAIN_STRING": {
+      "id": "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+      "object": "model",
+      "created": 1735142223,
+      "owned_by": "llamacpp",
+      "meta": {
+        "vocab_type": 2,
+        "n_vocab": 128256,
+        "n_ctx": 4096,
+        "n_ctx_train": "131072",
+        "n_embd": 4096,
+        "n_params": 8030261312,
+        "size": 4912898304,
+        "ftype": 15
+      }
+    },
+    "ENTRY_TRAIN_FLOAT": {
+      "id": "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+      "object": "model",
+      "created": 1735142223,
+      "owned_by": "llamacpp",
+      "meta": {
+        "vocab_type": 2,
+        "n_vocab": 128256,
+        "n_ctx": 4096,
+        "n_ctx_train": 8.5,
+        "n_embd": 4096,
+        "n_params": 8030261312,
+        "size": 4912898304,
+        "ftype": 15
+      }
+    },
+    "PROPS_FULL": {
+      "default_generation_settings": {
+        "params": { "reasoning_format": "auto", "reasoning_budget": -1 },
+        "n_ctx": 4096
+      },
+      "total_slots": 1,
+      "model_alias": "llama-server",
+      "model_path": "/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+      "modalities": { "vision": true, "video": false, "audio": false },
+      "chat_template": "{%- if add_generation_prompt %}…jinja…{% endif %}",
+      "chat_template_caps": {
+        "supports_string_content": true,
+        "supports_typed_content": false,
+        "supports_tools": true,
+        "supports_tool_calls": true,
+        "supports_parallel_tool_calls": true,
+        "supports_system_role": true,
+        "supports_preserve_reasoning": false,
+        "supports_reasoning_effort": true,
+        "supports_object_arguments": false
+      },
+      "bos_token": "<|begin_of_text|>",
+      "eos_token": "<|eot_id|>",
+      "build_info": "b6325",
+      "is_sleeping": false
+    },
+    "PROPS_NO_VISION_NO_EFFORT": {
+      "default_generation_settings": { "params": {}, "n_ctx": 8192 },
+      "modalities": { "vision": false, "video": false, "audio": false },
+      "chat_template_caps": {
+        "supports_string_content": true,
+        "supports_typed_content": false,
+        "supports_tools": true,
+        "supports_tool_calls": true,
+        "supports_parallel_tool_calls": false,
+        "supports_system_role": true,
+        "supports_preserve_reasoning": false,
+        "supports_reasoning_effort": false,
+        "supports_object_arguments": false
+      }
+    },
+    "PROPS_OLD_SERVER": {
+      "default_generation_settings": { "params": {}, "n_ctx": 2048 }
+    },
+    "PROPS_DECOYS": {
+      "default_generation_settings": {
+        "params": { "reasoning_effort": "high", "reasoning_budget": 1024 },
+        "n_ctx": 4096
+      },
+      "total_slots": 1,
+      "model_alias": "llama-server",
+      "model_path": "/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+      "modalities": { "vision": true, "video": false, "audio": false },
+      "chat_template": "{%- if add_generation_prompt %}…jinja…{% endif %}",
+      "chat_template_caps": {
+        "supports_string_content": true,
+        "supports_typed_content": false,
+        "supports_tools": true,
+        "supports_tool_calls": true,
+        "supports_parallel_tool_calls": true,
+        "supports_system_role": true,
+        "supports_preserve_reasoning": false,
+        "supports_reasoning_effort": true,
+        "supports_object_arguments": false
+      },
+      "bos_token": "<|begin_of_text|>",
+      "eos_token": "<|eot_id|>",
+      "build_info": "b6325",
+      "is_sleeping": false,
+      "max_tokens": 65536
+    },
+    "PROPS_STRING_CTX": {
+      "default_generation_settings": { "n_ctx": "8192" }
+    },
+    "PROPS_INVALID_CTX": {
+      "default_generation_settings": { "n_ctx": 0 }
+    },
+    "PROPS_CTX_0": {
+      "default_generation_settings": { "n_ctx": 0 },
+      "total_slots": 1,
+      "model_alias": "llama-server",
+      "model_path": "/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+      "modalities": { "vision": true, "video": false, "audio": false },
+      "chat_template": "{%- if add_generation_prompt %}…jinja…{% endif %}",
+      "chat_template_caps": {
+        "supports_string_content": true,
+        "supports_typed_content": false,
+        "supports_tools": true,
+        "supports_tool_calls": true,
+        "supports_parallel_tool_calls": true,
+        "supports_system_role": true,
+        "supports_preserve_reasoning": false,
+        "supports_reasoning_effort": true,
+        "supports_object_arguments": false
+      },
+      "bos_token": "<|begin_of_text|>",
+      "eos_token": "<|eot_id|>",
+      "build_info": "b6325",
+      "is_sleeping": false
+    },
+    "PROPS_CTX_NEG": {
+      "default_generation_settings": { "n_ctx": -1 },
+      "total_slots": 1,
+      "model_alias": "llama-server",
+      "model_path": "/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+      "modalities": { "vision": true, "video": false, "audio": false },
+      "chat_template": "{%- if add_generation_prompt %}…jinja…{% endif %}",
+      "chat_template_caps": {
+        "supports_string_content": true,
+        "supports_typed_content": false,
+        "supports_tools": true,
+        "supports_tool_calls": true,
+        "supports_parallel_tool_calls": true,
+        "supports_system_role": true,
+        "supports_preserve_reasoning": false,
+        "supports_reasoning_effort": true,
+        "supports_object_arguments": false
+      },
+      "bos_token": "<|begin_of_text|>",
+      "eos_token": "<|eot_id|>",
+      "build_info": "b6325",
+      "is_sleeping": false
+    },
+    "PROPS_CTX_FLOAT": {
+      "default_generation_settings": { "n_ctx": 8.5 },
+      "total_slots": 1,
+      "model_alias": "llama-server",
+      "model_path": "/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+      "modalities": { "vision": true, "video": false, "audio": false },
+      "chat_template": "{%- if add_generation_prompt %}…jinja…{% endif %}",
+      "chat_template_caps": {
+        "supports_string_content": true,
+        "supports_typed_content": false,
+        "supports_tools": true,
+        "supports_tool_calls": true,
+        "supports_parallel_tool_calls": true,
+        "supports_system_role": true,
+        "supports_preserve_reasoning": false,
+        "supports_reasoning_effort": true,
+        "supports_object_arguments": false
+      },
+      "bos_token": "<|begin_of_text|>",
+      "eos_token": "<|eot_id|>",
+      "build_info": "b6325",
+      "is_sleeping": false
+    },
+    "PROPS_CTX_STRING": {
+      "default_generation_settings": { "n_ctx": "abc" },
+      "total_slots": 1,
+      "model_alias": "llama-server",
+      "model_path": "/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+      "modalities": { "vision": true, "video": false, "audio": false },
+      "chat_template": "{%- if add_generation_prompt %}…jinja…{% endif %}",
+      "chat_template_caps": {
+        "supports_string_content": true,
+        "supports_typed_content": false,
+        "supports_tools": true,
+        "supports_tool_calls": true,
+        "supports_parallel_tool_calls": true,
+        "supports_system_role": true,
+        "supports_preserve_reasoning": false,
+        "supports_reasoning_effort": true,
+        "supports_object_arguments": false
+      },
+      "bos_token": "<|begin_of_text|>",
+      "eos_token": "<|eot_id|>",
+      "build_info": "b6325",
+      "is_sleeping": false
+    },
+    "PROPS_CTX_NULL": {
+      "default_generation_settings": { "n_ctx": null },
+      "total_slots": 1,
+      "model_alias": "llama-server",
+      "model_path": "/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+      "modalities": { "vision": true, "video": false, "audio": false },
+      "chat_template": "{%- if add_generation_prompt %}…jinja…{% endif %}",
+      "chat_template_caps": {
+        "supports_string_content": true,
+        "supports_typed_content": false,
+        "supports_tools": true,
+        "supports_tool_calls": true,
+        "supports_parallel_tool_calls": true,
+        "supports_system_role": true,
+        "supports_preserve_reasoning": false,
+        "supports_reasoning_effort": true,
+        "supports_object_arguments": false
+      },
+      "bos_token": "<|begin_of_text|>",
+      "eos_token": "<|eot_id|>",
+      "build_info": "b6325",
+      "is_sleeping": false
+    },
+    "PROPS_MODALITIES_MALFORMED": {
+      "default_generation_settings": {
+        "params": { "reasoning_format": "auto", "reasoning_budget": -1 },
+        "n_ctx": 4096
+      },
+      "modalities": "vision",
+      "chat_template": "{%- if add_generation_prompt %}…jinja…{% endif %}",
+      "chat_template_caps": {
+        "supports_string_content": true,
+        "supports_typed_content": false,
+        "supports_tools": true,
+        "supports_tool_calls": true,
+        "supports_parallel_tool_calls": true,
+        "supports_system_role": true,
+        "supports_preserve_reasoning": false,
+        "supports_reasoning_effort": true,
+        "supports_object_arguments": false
+      },
+      "bos_token": "<|begin_of_text|>",
+      "eos_token": "<|eot_id|>",
+      "build_info": "b6325",
+      "is_sleeping": false
+    },
+    "PROPS_CAPS_EMPTY": {
+      "default_generation_settings": {
+        "params": { "reasoning_format": "auto", "reasoning_budget": -1 },
+        "n_ctx": 4096
+      },
+      "total_slots": 1,
+      "model_alias": "llama-server",
+      "model_path": "/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+      "modalities": { "vision": true, "video": false, "audio": false },
+      "chat_template": "{%- if add_generation_prompt %}…jinja…{% endif %}",
+      "chat_template_caps": {},
+      "bos_token": "<|begin_of_text|>",
+      "eos_token": "<|eot_id|>",
+      "build_info": "b6325",
+      "is_sleeping": false
+    },
+    "PROPS_CAPS_STRING": {
+      "default_generation_settings": {
+        "params": { "reasoning_format": "auto", "reasoning_budget": -1 },
+        "n_ctx": 4096
+      },
+      "total_slots": 1,
+      "model_alias": "llama-server",
+      "model_path": "/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+      "modalities": { "vision": true, "video": false, "audio": false },
+      "chat_template": "{%- if add_generation_prompt %}…jinja…{% endif %}",
+      "chat_template_caps": { "supports_reasoning_effort": "yes" },
+      "bos_token": "<|begin_of_text|>",
+      "eos_token": "<|eot_id|>",
+      "build_info": "b6325",
+      "is_sleeping": false
+    },
+    "PROPS_CAPS_NUMBER": {
+      "default_generation_settings": {
+        "params": { "reasoning_format": "auto", "reasoning_budget": -1 },
+        "n_ctx": 4096
+      },
+      "total_slots": 1,
+      "model_alias": "llama-server",
+      "model_path": "/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+      "modalities": { "vision": true, "video": false, "audio": false },
+      "chat_template": "{%- if add_generation_prompt %}…jinja…{% endif %}",
+      "chat_template_caps": { "supports_reasoning_effort": 1 },
+      "bos_token": "<|begin_of_text|>",
+      "eos_token": "<|eot_id|>",
+      "build_info": "b6325",
+      "is_sleeping": false
+    },
+    "PROPS_CAPS_NULL": {
+      "default_generation_settings": {
+        "params": { "reasoning_format": "auto", "reasoning_budget": -1 },
+        "n_ctx": 4096
+      },
+      "total_slots": 1,
+      "model_alias": "llama-server",
+      "model_path": "/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+      "modalities": { "vision": true, "video": false, "audio": false },
+      "chat_template": "{%- if add_generation_prompt %}…jinja…{% endif %}",
+      "chat_template_caps": { "supports_reasoning_effort": null },
+      "bos_token": "<|begin_of_text|>",
+      "eos_token": "<|eot_id|>",
+      "build_info": "b6325",
+      "is_sleeping": false
+    }
+  },
+  "vectors": [
+    { "id": "origin/strips-trailing-v1", "op": "llamacpp.origin", "suite": "llamacppOrigin", "title": "strips the trailing /v1 from a normalized route base", "input": { "base": "http://127.0.0.1:8080/v1" }, "expect": { "eq": "http://127.0.0.1:8080" } },
+    { "id": "origin/strips-trailing-v1-slash", "op": "llamacpp.origin", "suite": "llamacppOrigin", "title": "strips /v1/ with the trailing slash", "input": { "base": "http://127.0.0.1:8080/v1/" }, "expect": { "eq": "http://127.0.0.1:8080" } },
+    { "id": "origin/strips-api-v1", "op": "llamacpp.origin", "suite": "llamacppOrigin", "title": "strips /v1 after another segment", "input": { "base": "http://host/api/v1" }, "expect": { "eq": "http://host/api" } },
+    { "id": "origin/strips-only-one-v1", "op": "llamacpp.origin", "suite": "llamacppOrigin", "title": "strips only ONE /v1", "input": { "base": "http://host/v1/v1" }, "expect": { "eq": "http://host/v1" } },
+    { "id": "origin/no-v1-passthrough", "op": "llamacpp.origin", "suite": "llamacppOrigin", "title": "defensively passes a base that does not end in /v1 through", "input": { "base": "http://127.0.0.1:8080" }, "expect": { "eq": "http://127.0.0.1:8080" } },
+    { "id": "origin/no-v1-slash-stripped", "op": "llamacpp.origin", "suite": "llamacppOrigin", "title": "defensively passes a non-/v1 base through (slash-stripped)", "input": { "base": "http://127.0.0.1:8080/" }, "expect": { "eq": "http://127.0.0.1:8080" } },
+
+    { "id": "gates/ownedBy-llamacpp", "op": "llamacpp.isOwnedBy", "suite": "the C10 catalog gates", "title": "isLlamacppOwnedBy: exactly the owned_by === 'llamacpp' spelling (the owned entry)", "input": { "entry": "$LLAMACPP_OWNED_ENTRY" }, "expect": { "eq": true } },
+    { "id": "gates/ownedBy-bare", "op": "llamacpp.isOwnedBy", "suite": "the C10 catalog gates", "title": "isLlamacppOwnedBy: a bare entry does not match", "input": { "entry": "$BARE_ENTRY" }, "expect": { "eq": false } },
+    { "id": "gates/ownedBy-llamaswap", "op": "llamacpp.isOwnedBy", "suite": "the C10 catalog gates", "title": "isLlamacppOwnedBy: the llama-swap entry does not match", "input": { "entry": "$LLAMA_SWAP_ENTRY" }, "expect": { "eq": false } },
+    { "id": "gates/ownedBy-gguf-only", "op": "llamacpp.isOwnedBy", "suite": "the C10 catalog gates", "title": "isLlamacppOwnedBy: a GGUF-meta entry without the marker does not match", "input": { "entry": "$GGUF_META_ONLY_ENTRY" }, "expect": { "eq": false } },
+
+    { "id": "gates/gguf-owned-entry", "op": "llamacpp.hasGgufMeta", "suite": "the C10 catalog gates", "title": "hasLlamacppGgufMeta: the owned GGUF entry matches", "input": { "entry": "$LLAMACPP_OWNED_ENTRY" }, "expect": { "eq": true } },
+    { "id": "gates/gguf-meta-without-owned-by", "op": "llamacpp.hasGgufMeta", "suite": "the C10 catalog gates", "title": "a GGUF meta object EXCLUDING llama-swap's authored block matches (older/passthrough shapes)", "input": { "entry": "$GGUF_META_ONLY_ENTRY" }, "expect": { "eq": true } },
+    { "id": "gates/gguf-false-positive-guard", "op": "llamacpp.hasGgufMeta", "suite": "the C10 catalog gates", "title": "FALSE-POSITIVE GUARD: meta.llamaswap is llama-swap's authored provenance, not the GGUF meta — even with the mirrored meta.n_ctx beside it", "input": { "entry": "$LLAMA_SWAP_ENTRY" }, "expect": { "eq": false } },
+    { "id": "gates/gguf-llamaswap-block-only", "op": "llamacpp.hasGgufMeta", "suite": "the C10 catalog gates", "title": "a meta.llamaswap block alone never matches", "input": { "entry": { "id": "m", "meta": { "llamaswap": { "type": "model" } } } }, "expect": { "eq": false } },
+    { "id": "gates/gguf-bare", "op": "llamacpp.hasGgufMeta", "suite": "the C10 catalog gates", "title": "a bare entry (no meta) never matches", "input": { "entry": "$BARE_ENTRY" }, "expect": { "eq": false } },
+    { "id": "gates/gguf-no-meta", "op": "llamacpp.hasGgufMeta", "suite": "the C10 catalog gates", "title": "an entry without meta never matches", "input": { "entry": { "id": "m" } }, "expect": { "eq": false } },
+    { "id": "gates/gguf-meta-array", "op": "llamacpp.hasGgufMeta", "suite": "the C10 catalog gates", "title": "a non-object (array) meta never matches", "input": { "entry": { "id": "m", "meta": [] } }, "expect": { "eq": false } },
+    { "id": "gates/gguf-shape-gate-nctx-only", "op": "llamacpp.hasGgufMeta", "suite": "the C10 catalog gates", "title": "SHAPE-GATED: a bare meta with only n_ctx (llama-swap's live shape) never matches", "input": { "entry": { "id": "m", "meta": { "n_ctx": 4096 } } }, "expect": { "eq": false } },
+    { "id": "gates/gguf-shape-gate-empty-meta", "op": "llamacpp.hasGgufMeta", "suite": "the C10 catalog gates", "title": "SHAPE-GATED: an empty meta object never matches", "input": { "entry": { "id": "m", "meta": {} } }, "expect": { "eq": false } },
+    { "id": "gates/gguf-core-key-beside-nctx", "op": "llamacpp.hasGgufMeta", "suite": "the C10 catalog gates", "title": "a real GGUF meta matches on ANY core shape key, even beside n_ctx", "input": { "entry": { "id": "m", "meta": { "n_ctx": 4096, "n_ctx_train": 131072 } } }, "expect": { "eq": true } },
+    { "id": "gates/gguf-nvocab-only", "op": "llamacpp.hasGgufMeta", "suite": "the C10 catalog gates", "title": "a core shape key alone (n_vocab) matches", "input": { "entry": { "id": "m", "meta": { "n_vocab": 50280 } } }, "expect": { "eq": true } },
+
+    { "id": "gates/catalogEntry-owned", "op": "llamacpp.isCatalogEntry", "suite": "the C10 catalog gates", "title": "isLlamacppCatalogEntry: the owned_by half claims the origin", "input": { "entry": "$LLAMACPP_OWNED_ENTRY" }, "expect": { "eq": true } },
+    { "id": "gates/catalogEntry-gguf", "op": "llamacpp.isCatalogEntry", "suite": "the C10 catalog gates", "title": "isLlamacppCatalogEntry: the GGUF-meta half claims the origin", "input": { "entry": "$GGUF_META_ONLY_ENTRY" }, "expect": { "eq": true } },
+    { "id": "gates/catalogEntry-llamaswap", "op": "llamacpp.isCatalogEntry", "suite": "the C10 catalog gates", "title": "isLlamacppCatalogEntry: the llama-swap entry claims nothing", "input": { "entry": "$LLAMA_SWAP_ENTRY" }, "expect": { "eq": false } },
+    { "id": "gates/catalogEntry-bare", "op": "llamacpp.isCatalogEntry", "suite": "the C10 catalog gates", "title": "isLlamacppCatalogEntry: a bare entry claims nothing", "input": { "entry": "$BARE_ENTRY" }, "expect": { "eq": false } },
+
+    { "id": "gates/provenance-llamaswap", "op": "llamacpp.hasLlamaSwapProvenance", "suite": "the C10 catalog gates", "title": "hasLlamaSwapProvenance: the authored meta.llamaswap block is the router's signature", "input": { "entry": "$LLAMA_SWAP_ENTRY" }, "expect": { "eq": true } },
+    { "id": "gates/provenance-empty-block", "op": "llamacpp.hasLlamaSwapProvenance", "suite": "the C10 catalog gates", "title": "an empty meta.llamaswap block is still provenance", "input": { "entry": { "id": "m", "meta": { "llamaswap": {}, "n_ctx": 4096 } } }, "expect": { "eq": true } },
+    { "id": "gates/provenance-llamacpp-owned", "op": "llamacpp.hasLlamaSwapProvenance", "suite": "the C10 catalog gates", "title": "the llama.cpp owned entry carries no llama-swap provenance", "input": { "entry": "$LLAMACPP_OWNED_ENTRY" }, "expect": { "eq": false } },
+    { "id": "gates/provenance-bare", "op": "llamacpp.hasLlamaSwapProvenance", "suite": "the C10 catalog gates", "title": "a bare entry carries no llama-swap provenance", "input": { "entry": "$BARE_ENTRY" }, "expect": { "eq": false } },
+
+    { "id": "fetchProps/get-and-parse", "op": "llamacpp.fetchProps", "suite": "fetchLlamacppProps (GET {origin}/props)", "title": "GETs {origin}/props and passes the shape gate with the parsed payload", "input": { "origin": "http://127.0.0.1:8080" }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "json": "$PROPS_FULL" } }], "expect": { "fields": { "props": "$PROPS_FULL", "inconclusive": null }, "calls": [{ "url": "http://127.0.0.1:8080/props", "method": "GET", "headers": { "Accept": "application/json" }, "notHeaders": ["Authorization"] }] } },
+    { "id": "fetchProps/c7-bearer", "op": "llamacpp.fetchProps", "suite": "fetchLlamacppProps (GET {origin}/props)", "title": "rides the route's apiKey (C7): Authorization Bearer when set", "input": { "origin": "http://h:1", "apiKey": "sk-local" }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "json": "$PROPS_FULL" } }], "expect": { "calls": [{ "headers": { "Authorization": "Bearer sk-local" } }] } },
+    { "id": "fetchProps/404-definitive", "op": "llamacpp.fetchProps", "suite": "fetchLlamacppProps (GET {origin}/props)", "title": "404 is a DEFINITIVE non-match (C10's well-formed non-answers)", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "status": 404, "text": "nope" } }], "expect": { "eq": {} } },
+    { "id": "fetchProps/405-definitive", "op": "llamacpp.fetchProps", "suite": "fetchLlamacppProps (GET {origin}/props)", "title": "405 is a DEFINITIVE non-match", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "status": 405, "text": "nope" } }], "expect": { "eq": {} } },
+    { "id": "fetchProps/401-definitive", "op": "llamacpp.fetchProps", "suite": "fetchLlamacppProps (GET {origin}/props)", "title": "401 is a DEFINITIVE non-match", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "status": 401, "text": "nope" } }], "expect": { "eq": {} } },
+    { "id": "fetchProps/5xx-inconclusive-500", "op": "llamacpp.fetchProps", "suite": "fetchLlamacppProps (GET {origin}/props)", "title": "5xx is INCONCLUSIVE (not evidence)", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "status": 500, "text": "boom" } }], "expect": { "eq": { "inconclusive": true } } },
+    { "id": "fetchProps/5xx-inconclusive-502", "op": "llamacpp.fetchProps", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "status": 502, "text": "boom" } }], "expect": { "eq": { "inconclusive": true } } },
+    { "id": "fetchProps/5xx-inconclusive-503", "op": "llamacpp.fetchProps", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "status": 503, "text": "boom" } }], "expect": { "eq": { "inconclusive": true } } },
+    { "id": "fetchProps/network-inconclusive", "op": "llamacpp.fetchProps", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "throw": "network" } }], "expect": { "eq": { "inconclusive": true } } },
+    { "id": "fetchProps/abort-inconclusive", "op": "llamacpp.fetchProps", "input": { "origin": "http://h:1", "signal": "preaborted" }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "throw": "abort" } }], "expect": { "eq": { "inconclusive": true } } },
+    { "id": "fetchProps/non-props-kobold-shape", "op": "llamacpp.fetchProps", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "json": { "n_ctx": 8192, "chat_template": "…", "modalities": { "vision": true } } } }], "expect": { "eq": {} } },
+    { "id": "fetchProps/non-props-dgs-string", "op": "llamacpp.fetchProps", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "json": { "default_generation_settings": "not-an-object" } } }], "expect": { "eq": {} } },
+    { "id": "fetchProps/non-props-dgs-null", "op": "llamacpp.fetchProps", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "json": { "default_generation_settings": null } } }], "expect": { "eq": {} } },
+    { "id": "fetchProps/non-props-array", "op": "llamacpp.fetchProps", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "json": [1, 2] } }], "expect": { "eq": {} } },
+    { "id": "fetchProps/non-props-string-body", "op": "llamacpp.fetchProps", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "json": "ok" } }], "expect": { "eq": {} } },
+    { "id": "fetchProps/non-json-200-definitive", "op": "llamacpp.fetchProps", "input": { "origin": "http://h:1" }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "text": "{ not json" } }], "expect": { "eq": {} } },
+    { "id": "fetchProps/hostile-origin-inconclusive", "op": "llamacpp.fetchProps", "input": { "origin": "" }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "throw": "network" } }], "expect": { "fields": { "inconclusive": true } } },
+
+    { "id": "map/ctx-prefers-configured", "op": "llamacpp.propsToCanonical", "suite": "llamacppPropsToCanonical: contextWindow (the two-layer preference)", "title": "prefers default_generation_settings.n_ctx (AS CONFIGURED) over meta.n_ctx_train", "input": { "props": "$PROPS_FULL", "entry": "$LLAMACPP_OWNED_ENTRY" }, "expect": { "fields": { "discoveredCanonical.contextWindow": 4096 } } },
+    { "id": "map/ctx-falls-to-train", "op": "llamacpp.propsToCanonical", "input": { "props": "$PROPS_OLD_SERVER", "entry": "$LLAMACPP_OWNED_ENTRY" }, "expect": { "fields": { "discoveredCanonical.contextWindow": 2048 } } },
+    { "id": "map/ctx-bad-0-falls-to-train", "op": "llamacpp.propsToCanonical", "input": { "props": "$PROPS_CTX_0", "entry": "$LLAMACPP_OWNED_ENTRY" }, "expect": { "fields": { "discoveredCanonical.contextWindow": 131072 } } },
+    { "id": "map/ctx-bad-negative-falls-to-train", "op": "llamacpp.propsToCanonical", "input": { "props": "$PROPS_CTX_NEG", "entry": "$LLAMACPP_OWNED_ENTRY" }, "expect": { "fields": { "discoveredCanonical.contextWindow": 131072 } } },
+    { "id": "map/ctx-bad-float-falls-to-train", "op": "llamacpp.propsToCanonical", "input": { "props": "$PROPS_CTX_FLOAT", "entry": "$LLAMACPP_OWNED_ENTRY" }, "expect": { "fields": { "discoveredCanonical.contextWindow": 131072 } } },
+    { "id": "map/ctx-bad-string-falls-to-train", "op": "llamacpp.propsToCanonical", "input": { "props": "$PROPS_CTX_STRING", "entry": "$LLAMACPP_OWNED_ENTRY" }, "expect": { "fields": { "discoveredCanonical.contextWindow": 131072 } } },
+    { "id": "map/ctx-bad-null-falls-to-train", "op": "llamacpp.propsToCanonical", "input": { "props": "$PROPS_CTX_NULL", "entry": "$LLAMACPP_OWNED_ENTRY" }, "expect": { "fields": { "discoveredCanonical.contextWindow": 131072 } } },
+    { "id": "map/ctx-invalid-no-meta-omitted", "op": "llamacpp.propsToCanonical", "input": { "props": "$PROPS_INVALID_CTX", "entry": "$BARE_ENTRY" }, "expect": { "fields": { "discoveredCanonical": null } } },
+    { "id": "map/c6-failed-props-emits-train-ctx", "op": "llamacpp.propsToCanonical", "suite": "llamacppPropsToCanonical: contextWindow (the two-layer preference)", "title": "C6: a FAILED /props (undefined) still emits the fetch-free meta.n_ctx_train contextWindow", "input": { "props": null, "entry": "$LLAMACPP_OWNED_ENTRY" }, "expect": { "fields": { "discoveredCanonical": { "contextWindow": 131072 } } } },
+    { "id": "map/c6-failed-props-no-meta-nothing", "op": "llamacpp.propsToCanonical", "input": { "props": null, "entry": "$BARE_ENTRY" }, "expect": { "fields": { "discoveredCanonical": null } } },
+    { "id": "map/coerce-digit-string-nctx", "op": "llamacpp.propsToCanonical", "suite": "llamacppPropsToCanonical: contextWindow (the two-layer preference)", "title": "coerces digit strings and rejects non-integers through toPositiveInt (props side)", "input": { "props": "$PROPS_STRING_CTX", "entry": "$BARE_ENTRY" }, "expect": { "fields": { "discoveredCanonical.contextWindow": 8192 } } },
+    { "id": "map/coerce-digit-string-train", "op": "llamacpp.propsToCanonical", "input": { "props": null, "entry": "$ENTRY_TRAIN_STRING" }, "expect": { "fields": { "discoveredCanonical.contextWindow": 131072 } } },
+    { "id": "map/coerce-float-train-invalid", "op": "llamacpp.propsToCanonical", "input": { "props": null, "entry": "$ENTRY_TRAIN_FLOAT" }, "expect": { "fields": { "discoveredCanonical": null } } },
+    { "id": "map/mirror-only-not-in-chain", "op": "llamacpp.propsToCanonical", "input": { "props": null, "entry": { "id": "m", "meta": { "n_ctx": 4096 } } }, "expect": { "fields": { "discoveredCanonical": null } } },
+    { "id": "map/input-vision-true", "op": "llamacpp.propsToCanonical", "suite": "llamacppPropsToCanonical: input (modalities.vision)", "title": "vision true → ['text','image']", "input": { "props": "$PROPS_FULL", "entry": "$BARE_ENTRY" }, "expect": { "fields": { "discoveredCanonical.input": ["text", "image"] } } },
+    { "id": "map/input-vision-false", "op": "llamacpp.propsToCanonical", "input": { "props": "$PROPS_NO_VISION_NO_EFFORT", "entry": "$BARE_ENTRY" }, "expect": { "fields": { "discoveredCanonical.input": ["text"] } } },
+    { "id": "map/input-absent-old-server", "op": "llamacpp.propsToCanonical", "input": { "props": "$PROPS_OLD_SERVER", "entry": "$BARE_ENTRY" }, "expect": { "fields": { "discoveredCanonical.input": null } } },
+    { "id": "map/input-malformed-modalities", "op": "llamacpp.propsToCanonical", "input": { "props": "$PROPS_MODALITIES_MALFORMED", "entry": "$BARE_ENTRY" }, "expect": { "fields": { "discoveredCanonical.input": null } } },
+    { "id": "map/c6-failed-props-input-only-context", "op": "llamacpp.propsToCanonical", "input": { "props": null, "entry": "$LLAMACPP_OWNED_ENTRY" }, "expect": { "fields": { "discoveredCanonical": { "contextWindow": 131072 } } } },
+    { "id": "map/caps-effort-true", "op": "llamacpp.propsToCanonical", "suite": "llamacppPropsToCanonical: the caps boolean gate (the ONE C5 compat exception)", "title": "supports_reasoning_effort true → compat true AND reasoning true", "input": { "props": "$PROPS_FULL", "entry": "$BARE_ENTRY" }, "expect": { "fields": { "discoveredCanonical.compat": { "supportsReasoningEffort": true }, "discoveredCanonical.reasoning": true } } },
+    { "id": "map/caps-effort-false-no-reasoning", "op": "llamacpp.propsToCanonical", "input": { "props": "$PROPS_NO_VISION_NO_EFFORT", "entry": "$BARE_ENTRY" }, "expect": { "fields": { "discoveredCanonical.compat": { "supportsReasoningEffort": false }, "discoveredCanonical.reasoning": null } } },
+    { "id": "map/caps-absent-old-server", "op": "llamacpp.propsToCanonical", "input": { "props": "$PROPS_OLD_SERVER", "entry": "$BARE_ENTRY" }, "expect": { "eq": { "discoveredCanonical": { "contextWindow": 2048 } }, "fields": { "discoveredCanonical.compat": null } } },
+    { "id": "map/caps-malformed-empty", "op": "llamacpp.propsToCanonical", "input": { "props": "$PROPS_CAPS_EMPTY", "entry": "$BARE_ENTRY" }, "expect": { "fields": { "discoveredCanonical.compat": null, "discoveredCanonical.reasoning": null } } },
+    { "id": "map/caps-malformed-string", "op": "llamacpp.propsToCanonical", "input": { "props": "$PROPS_CAPS_STRING", "entry": "$BARE_ENTRY" }, "expect": { "fields": { "discoveredCanonical.compat": null, "discoveredCanonical.reasoning": null } } },
+    { "id": "map/caps-malformed-number", "op": "llamacpp.propsToCanonical", "input": { "props": "$PROPS_CAPS_NUMBER", "entry": "$BARE_ENTRY" }, "expect": { "fields": { "discoveredCanonical.compat": null, "discoveredCanonical.reasoning": null } } },
+    { "id": "map/caps-malformed-null", "op": "llamacpp.propsToCanonical", "input": { "props": "$PROPS_CAPS_NULL", "entry": "$BARE_ENTRY" }, "expect": { "fields": { "discoveredCanonical.compat": null, "discoveredCanonical.reasoning": null } } },
+    { "id": "map/never-emits-maxTokens-thinkingLevelMap", "op": "llamacpp.propsToCanonical", "suite": "llamacppPropsToCanonical: the never-emits (C5 + the jinja capture-out-of-scope)", "title": "never emits maxTokens or thinkingLevelMap, however much /props carries", "input": { "props": "$PROPS_DECOYS", "entry": "$LLAMACPP_OWNED_ENTRY" }, "expect": { "fields": { "discoveredCanonical": { "defined": true }, "discoveredCanonical.maxTokens": null, "discoveredCanonical.thinkingLevelMap": null } } },
+    { "id": "map/jinja-never-propagated", "op": "llamacpp.propsToCanonical", "input": { "props": "$PROPS_FULL", "entry": "$BARE_ENTRY" }, "expect": { "jsonNotContains": ["chat_template", "jinja"] } },
+
+    { "id": "rows/props-answered-server-wide", "op": "llamacpp.rowsById", "suite": "llamacppRowsById (the pure seam, C4 semantics)", "title": "props answered: EVERY entry is enriched (router mode — server-wide values)", "input": { "entries": ["$LLAMACPP_OWNED_ENTRY", "$GGUF_META_ONLY_ENTRY", "$BARE_ENTRY"], "props": "$PROPS_FULL" }, "expect": { "byIdSize": 3, "byId": [{ "id": "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf", "canonical": { "contextWindow": 4096, "input": ["text", "image"], "compat": { "supportsReasoningEffort": true }, "reasoning": true } }, { "id": "qwen3.8-8b-Q4_K_M.gguf", "canonical": { "contextWindow": 4096, "input": ["text", "image"], "compat": { "supportsReasoningEffort": true }, "reasoning": true } }, { "id": "gemma-4-E4B-it", "canonical": { "contextWindow": 4096, "input": ["text", "image"], "compat": { "supportsReasoningEffort": true }, "reasoning": true } }] } },
+    { "id": "rows/minimal-props-bare-undefined", "op": "llamacpp.rowsById", "title": "props with no usable fields: bare entries are enriched-nothing (undefined values)", "input": { "entries": ["$LLAMACPP_OWNED_ENTRY", "$BARE_ENTRY"], "props": { "default_generation_settings": {} } }, "expect": { "byIdSize": 2, "byId": [{ "id": "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf", "canonical": { "contextWindow": 131072 } }, { "id": "gemma-4-E4B-it", "canonical": null }] } },
+    { "id": "rows/props-failed-train-fallback-only", "op": "llamacpp.rowsById", "title": "props failed: only the fetch-free meta.n_ctx_train fallback applies", "input": { "entries": ["$LLAMACPP_OWNED_ENTRY", "$GGUF_META_ONLY_ENTRY", "$BARE_ENTRY"], "props": null }, "expect": { "byId": [{ "id": "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf", "canonical": { "contextWindow": 131072 } }, { "id": "qwen3.8-8b-Q4_K_M.gguf", "canonical": { "contextWindow": 131072 } }], "byIdAbsent": ["gemma-4-E4B-it"] } },
+    { "id": "rows/mirror-only-absent", "op": "llamacpp.rowsById", "title": "an entry with only the as-configured mirror (no n_ctx_train) keeps the generic row when props failed", "input": { "entries": [{ "id": "m", "meta": { "n_ctx": 4096 } }], "props": null }, "expect": { "byIdSize": 0 } },
+    { "id": "rows/empty-catalog", "op": "llamacpp.rowsById", "title": "an empty catalog resolves an empty map", "input": { "entries": [], "props": "$PROPS_FULL" }, "expect": { "byIdSize": 0 } },
+
+    { "id": "detectVerdict/catalog-owned-by-zero-fetch", "op": "llamacpp.detect", "suite": "llamacppBackend.detect — the catalog-first ZERO-fetch matches", "title": "matches on owned_by === 'llamacpp' without any fetch", "input": { "baseUrl": "http://127.0.0.1:8080/v1", "entries": ["$LLAMACPP_OWNED_ENTRY"] }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "throw": "network" } }], "expect": { "eq": { "match": true, "facts": {} }, "fetchCount": 0 } },
+    { "id": "detectVerdict/catalog-gguf-zero-fetch", "op": "llamacpp.detect", "title": "matches on a GGUF meta object (non-llama-swap) without any fetch", "input": { "baseUrl": "http://127.0.0.1:8080/v1", "entries": ["$GGUF_META_ONLY_ENTRY"] }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "throw": "network" } }], "expect": { "eq": { "match": true, "facts": {} }, "fetchCount": 0 } },
+    { "id": "detectVerdict/llamaswap-guard-zero-fetch", "op": "llamacpp.detect", "title": "FALSE-POSITIVE GUARD: a llama-swap catalog (meta.llamaswap) is a ZERO-fetch definitive no", "input": { "baseUrl": "http://127.0.0.1:8080/v1", "entries": ["$LLAMA_SWAP_ENTRY", "$BARE_ENTRY"] }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "throw": "network" } }], "expect": { "eq": { "match": false }, "fetchCount": 0 } },
+    { "id": "detectVerdict/shape-gate-bare-nctx-probes", "op": "llamacpp.detect", "title": "FALSE-POSITIVE GUARD (shape gate): a bare n_ctx-only meta does NOT catalog-match — it falls through to the probe, never a zero-fetch claim", "input": { "baseUrl": "http://127.0.0.1:8080/v1", "entries": [{ "id": "m", "object": "model", "created": 1, "meta": { "n_ctx": 4096 } }] }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "status": 404, "text": "not found" } }], "expect": { "fields": { "match": false, "inconclusive": null }, "fetchCount": 1 } },
+    { "id": "detectVerdict/llamaswap-mixed-shape-guard", "op": "llamacpp.detect", "title": "FALSE-POSITIVE GUARD: the mixed live shape (bare n_ctx meta + a meta.llamaswap entry) is a ZERO-fetch definitive no", "input": { "baseUrl": "http://127.0.0.1:8080/v1", "entries": [{ "id": "a", "object": "model", "created": 1, "meta": { "n_ctx": 4096 } }, "$LLAMA_SWAP_ENTRY"] }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "throw": "network" } }], "expect": { "eq": { "match": false }, "fetchCount": 0 } },
+    { "id": "detectVerdict/llamaswap-definitive-unreachable-props", "op": "llamacpp.detect", "title": "FALSE-POSITIVE GUARD: the llama-swap verdict is definitive even when /props would be unreachable", "input": { "baseUrl": "http://127.0.0.1:8080/v1", "entries": ["$LLAMA_SWAP_ENTRY"] }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "throw": "network" } }], "expect": { "eq": { "match": false }, "fields": { "inconclusive": null }, "fetchCount": 0 } },
+    { "id": "detectVerdict/probe-match-caches-facts", "op": "llamacpp.detect", "suite": "llamacppBackend.detect — the ONE probe (bare-shape catalogs)", "title": "matches on the /props shape and caches the payload in facts (the reuse contract)", "input": { "baseUrl": "http://127.0.0.1:8080/v1", "entries": ["$BARE_ENTRY"] }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "json": "$PROPS_FULL" } }], "expect": { "fields": { "match": true, "facts.props": "$PROPS_FULL" }, "fetchCount": 1 } },
+    { "id": "detectVerdict/404-definitive", "op": "llamacpp.detect", "title": "404 → a DEFINITIVE non-match", "input": { "baseUrl": "http://127.0.0.1:8080/v1", "entries": ["$BARE_ENTRY"] }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "status": 404, "text": "nope" } }], "expect": { "eq": { "match": false } } },
+    { "id": "detectVerdict/405-definitive", "op": "llamacpp.detect", "title": "405 → a DEFINITIVE non-match", "input": { "baseUrl": "http://127.0.0.1:8080/v1", "entries": ["$BARE_ENTRY"] }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "status": 405, "text": "nope" } }], "expect": { "eq": { "match": false } } },
+    { "id": "detectVerdict/401-definitive", "op": "llamacpp.detect", "title": "401 → a DEFINITIVE non-match", "input": { "baseUrl": "http://127.0.0.1:8080/v1", "entries": ["$BARE_ENTRY"] }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "status": 401, "text": "nope" } }], "expect": { "eq": { "match": false } } },
+    { "id": "detectVerdict/5xx-inconclusive", "op": "llamacpp.detect", "title": "5xx → INCONCLUSIVE (retriable)", "input": { "baseUrl": "http://127.0.0.1:8080/v1", "entries": ["$BARE_ENTRY"] }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "status": 500, "text": "boom" } }], "expect": { "eq": { "match": false, "inconclusive": true } } },
+    { "id": "detectVerdict/network-inconclusive", "op": "llamacpp.detect", "title": "network failure → INCONCLUSIVE (retriable)", "input": { "baseUrl": "http://127.0.0.1:8080/v1", "entries": ["$BARE_ENTRY"] }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "throw": "network" } }], "expect": { "eq": { "match": false, "inconclusive": true } } },
+    { "id": "detectVerdict/non-props-200-definitive", "op": "llamacpp.detect", "title": "a 200 non-props body (KoboldCpp's /props) → a definitive non-match", "input": { "baseUrl": "http://127.0.0.1:8080/v1", "entries": ["$BARE_ENTRY"] }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "json": { "n_ctx": 8192, "chat_template": "…" } } }], "expect": { "eq": { "match": false } } },
+    { "id": "detectVerdict/c7-bearer", "op": "llamacpp.detect", "title": "the probe rides the route's apiKey (C7)", "input": { "baseUrl": "http://127.0.0.1:8080/v1", "entries": ["$BARE_ENTRY"], "apiKey": "sk-local" }, "fetch": [{ "when": { "pathSuffix": "/props" }, "reply": { "json": "$PROPS_FULL" } }], "expect": { "calls": [{ "headers": { "Authorization": "Bearer sk-local" } }] } }
+  ]
+}

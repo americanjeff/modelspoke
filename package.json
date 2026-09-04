@@ -1,0 +1,95 @@
+{
+  "name": "modelspoke",
+  "version": "0.1.0",
+  "license": "MIT",
+  "description": "Local OpenAI-compatible model-server discovery + tiered reasoning-metadata resolution for DeepSeek Harness (dsh).",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "./dist/dsh/index.js",
+  "types": "./dist/dsh/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/dsh/index.d.ts",
+      "default": "./dist/dsh/index.js"
+    },
+    "./client": "./dist/dsh/client.js",
+    "./lib": {
+      "types": "./dist/lib.d.ts",
+      "default": "./dist/lib.js"
+    },
+    "./package.json": "./package.json",
+    "./dist/*": "./dist/*"
+  },
+  "files": [
+    "dist",
+    "dsh.cordis.yml",
+    "assets/logo",
+    "docs/screenshots"
+  ],
+  "scripts": {
+    "build": "tsc && tsc -p tsconfig.client.json && tsdown",
+    "prepack": "npm run build",
+    "test": "vitest run",
+    "e2e": "node test/e2e/e2e.test.mjs",
+    "drift-check": "node scripts/preset-drift-check.ts",
+    "preset-draft": "node scripts/preset-draft.ts"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./dsh.cordis.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ],
+      "external": [
+        "@deepseek-ai/dsh-client-connection/client"
+      ]
+    }
+  },
+  "dependencies": {
+    "@earendil-works/pi-ai": "^0.84.2"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": ">=4.0.0",
+    "@deepseek-ai/dsh-llm": "*",
+    "@deepseek-ai/dsh-settings": "*",
+    "@deepseek-ai/schemastery": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-llm": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-settings": {
+      "optional": true
+    },
+    "@deepseek-ai/schemastery": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.2",
+    "@deepseek-ai/dsh-client-connection": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-client-runtime": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-settings": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-slots": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-llm": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-settings": "^0.1.1-rc.2",
+    "@deepseek-ai/schemastery": "^3.18.2",
+    "@types/node": "^22.0.0",
+    "@types/react": "~18.3.1",
+    "@types/react-dom": "~18.3.7",
+    "js-yaml": "^4.3.1",
+    "playwright-core": "^1.62.1",
+    "tsdown": "^0.22.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  }
+}

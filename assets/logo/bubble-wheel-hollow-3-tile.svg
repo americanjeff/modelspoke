@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  ModelSpoke icon — "Bubble Wheel, hollow hub", depth variant,
+  SOFT RECT PANEL (final README header logo, settled 2026-08-26).
+
+  Spec (owner decisions across the iteration):
+  - background: BLACK at 50% peak opacity — reads as a gentle gray field
+    on GitHub light and as a subtle darkening on GitHub dark (#0d1117),
+    so the white mark keeps contrast in BOTH themes
+  - shape: RECTANGLE, not a radial pool — a circular pool's edge read as
+    a competing shape against the wheel (owner: "the boundary of the
+    background color should not contribute to the presentation of
+    shapes"); straight soft edges ~18u from the art read as a panel, not
+    a shape
+  - edge: 7u ease-out ramp to alpha 0 (16 subpixel rings, fill-rule
+    evenodd) — no filters: filters don't render in every SVG-as-image
+    pipeline (GitHub's rasterizer included); rings do
+  - centering: the OPAQUE (main) copy is centered on the 100-unit box —
+    the 11%/33% depth echoes trail upper-left. translate(9.44,-2.62) is
+    the re-centering from the composition-bbox centering.
+  - mark: white, groups byte-identical to bubble-wheel-hollow-3-white.svg
+    (opacities 1.0/0.33/0.11; depth knobs — stroke 6 outer, hub stroke 3
+    r 4.5 — in that file's header).
+
+  Geometry: 100x100 viewBox (the 71.5 predecessor couldn't hold the mark
+  inside a seam-free fade — the tail reaches 43.85u from center vs a
+  35.75u inscribed circle). Composition bbox now spans x 10.4..73.9,
+  y 8.6..69.1 — fully inside the solid core (inset 7u).
+
+  Usage: <img ... width="88" height="88"> in the README (restores the
+  mark to its pre-tile on-page size).
+
+  Iteration history (all superseded): white-on-transparent (invisible on
+  light); radial pool 1.0 (circular edge + soft tail edge — the tail sat
+  in the fade); radial pool 0.9/0.95 stops (crisper circle = worse);
+  50% radial (right darkness, wrong shape); white panel + white mark
+  (cancels on light); white panel + dark mark (works, but owner settled
+  on the light mark).
+
+  Siblings: bubble-wheel-hollow.svg (single currentColor),
+  bubble-wheel-hollow-3.svg (depth currentColor),
+  bubble-wheel-hollow-3-white.svg (depth white-on-transparent).
+-->
+<svg
+   viewBox="0 0 100 100"
+   version="1.1"
+   xmlns="http://www.w3.org/2000/svg">
+  <path d="M 9.0,0.0 H 91.0 A 9.0,9.0 0 0 1 100.0,9.0 V 91.0 A 9.0,9.0 0 0 1 91.0,100.0 H 9.0 A 9.0,9.0 0 0 1 0.0,91.0 V 9.0 A 9.0,9.0 0 0 1 9.0,0.0 Z M 9.0,0.4375 H 91.0 A 8.5625,8.5625 0 0 1 99.5625,9.0 V 91.0 A 8.5625,8.5625 0 0 1 91.0,99.5625 H 9.0 A 8.5625,8.5625 0 0 1 0.4375,91.0 V 9.0 A 8.5625,8.5625 0 0 1 9.0,0.4375 Z" fill="#000000" fill-opacity="0.061" fill-rule="evenodd"/>
+  <path d="M 9.0,0.4375 H 91.0 A 8.5625,8.5625 0 0 1 99.5625,9.0 V 91.0 A 8.5625,8.5625 0 0 1 91.0,99.5625 H 9.0 A 8.5625,8.5625 0 0 1 0.4375,91.0 V 9.0 A 8.5625,8.5625 0 0 1 9.0,0.4375 Z M 9.0,0.875 H 91.0 A 8.125,8.125 0 0 1 99.125,9.0 V 91.0 A 8.125,8.125 0 0 1 91.0,99.125 H 9.0 A 8.125,8.125 0 0 1 0.875,91.0 V 9.0 A 8.125,8.125 0 0 1 9.0,0.875 Z" fill="#000000" fill-opacity="0.117" fill-rule="evenodd"/>
+  <path d="M 9.0,0.875 H 91.0 A 8.125,8.125 0 0 1 99.125,9.0 V 91.0 A 8.125,8.125 0 0 1 91.0,99.125 H 9.0 A 8.125,8.125 0 0 1 0.875,91.0 V 9.0 A 8.125,8.125 0 0 1 9.0,0.875 Z M 9.0,1.3125 H 91.0 A 7.6875,7.6875 0 0 1 98.6875,9.0 V 91.0 A 7.6875,7.6875 0 0 1 91.0,98.6875 H 9.0 A 7.6875,7.6875 0 0 1 1.3125,91.0 V 9.0 A 7.6875,7.6875 0 0 1 9.0,1.3125 Z" fill="#000000" fill-opacity="0.170" fill-rule="evenodd"/>
+  <path d="M 9.0,1.3125 H 91.0 A 7.6875,7.6875 0 0 1 98.6875,9.0 V 91.0 A 7.6875,7.6875 0 0 1 91.0,98.6875 H 9.0 A 7.6875,7.6875 0 0 1 1.3125,91.0 V 9.0 A 7.6875,7.6875 0 0 1 9.0,1.3125 Z M 9.0,1.75 H 91.0 A 7.25,7.25 0 0 1 98.25,9.0 V 91.0 A 7.25,7.25 0 0 1 91.0,98.25 H 9.0 A 7.25,7.25 0 0 1 1.75,91.0 V 9.0 A 7.25,7.25 0 0 1 9.0,1.75 Z" fill="#000000" fill-opacity="0.219" fill-rule="evenodd"/>
+  <path d="M 9.0,1.75 H 91.0 A 7.25,7.25 0 0 1 98.25,9.0 V 91.0 A 7.25,7.25 0 0 1 91.0,98.25 H 9.0 A 7.25,7.25 0 0 1 1.75,91.0 V 9.0 A 7.25,7.25 0 0 1 9.0,1.75 Z M 9.0,2.1875 H 91.0 A 6.8125,6.8125 0 0 1 97.8125,9.0 V 91.0 A 6.8125,6.8125 0 0 1 91.0,97.8125 H 9.0 A 6.8125,6.8125 0 0 1 2.1875,91.0 V 9.0 A 6.8125,6.8125 0 0 1 9.0,2.1875 Z" fill="#000000" fill-opacity="0.264" fill-rule="evenodd"/>
+  <path d="M 9.0,2.1875 H 91.0 A 6.8125,6.8125 0 0 1 97.8125,9.0 V 91.0 A 6.8125,6.8125 0 0 1 91.0,97.8125 H 9.0 A 6.8125,6.8125 0 0 1 2.1875,91.0 V 9.0 A 6.8125,6.8125 0 0 1 9.0,2.1875 Z M 9.0,2.625 H 91.0 A 6.375,6.375 0 0 1 97.375,9.0 V 91.0 A 6.375,6.375 0 0 1 91.0,97.375 H 9.0 A 6.375,6.375 0 0 1 2.625,91.0 V 9.0 A 6.375,6.375 0 0 1 9.0,2.625 Z" fill="#000000" fill-opacity="0.305" fill-rule="evenodd"/>
+  <path d="M 9.0,2.625 H 91.0 A 6.375,6.375 0 0 1 97.375,9.0 V 91.0 A 6.375,6.375 0 0 1 91.0,97.375 H 9.0 A 6.375,6.375 0 0 1 2.625,91.0 V 9.0 A 6.375,6.375 0 0 1 9.0,2.625 Z M 9.0,3.0625 H 91.0 A 5.9375,5.9375 0 0 1 96.9375,9.0 V 91.0 A 5.9375,5.9375 0 0 1 91.0,96.9375 H 9.0 A 5.9375,5.9375 0 0 1 3.0625,91.0 V 9.0 A 5.9375,5.9375 0 0 1 9.0,3.0625 Z" fill="#000000" fill-opacity="0.342" fill-rule="evenodd"/>
+  <path d="M 9.0,3.0625 H 91.0 A 5.9375,5.9375 0 0 1 96.9375,9.0 V 91.0 A 5.9375,5.9375 0 0 1 91.0,96.9375 H 9.0 A 5.9375,5.9375 0 0 1 3.0625,91.0 V 9.0 A 5.9375,5.9375 0 0 1 9.0,3.0625 Z M 9.0,3.5 H 91.0 A 5.5,5.5 0 0 1 96.5,9.0 V 91.0 A 5.5,5.5 0 0 1 91.0,96.5 H 9.0 A 5.5,5.5 0 0 1 3.5,91.0 V 9.0 A 5.5,5.5 0 0 1 9.0,3.5 Z" fill="#000000" fill-opacity="0.375" fill-rule="evenodd"/>
+  <path d="M 9.0,3.5 H 91.0 A 5.5,5.5 0 0 1 96.5,9.0 V 91.0 A 5.5,5.5 0 0 1 91.0,96.5 H 9.0 A 5.5,5.5 0 0 1 3.5,91.0 V 9.0 A 5.5,5.5 0 0 1 9.0,3.5 Z M 9.0,3.9375 H 91.0 A 5.0625,5.0625 0 0 1 96.0625,9.0 V 91.0 A 5.0625,5.0625 0 0 1 91.0,96.0625 H 9.0 A 5.0625,5.0625 0 0 1 3.9375,91.0 V 9.0 A 5.0625,5.0625 0 0 1 9.0,3.9375 Z" fill="#000000" fill-opacity="0.404" fill-rule="evenodd"/>
+  <path d="M 9.0,3.9375 H 91.0 A 5.0625,5.0625 0 0 1 96.0625,9.0 V 91.0 A 5.0625,5.0625 0 0 1 91.0,96.0625 H 9.0 A 5.0625,5.0625 0 0 1 3.9375,91.0 V 9.0 A 5.0625,5.0625 0 0 1 9.0,3.9375 Z M 9.0,4.375 H 91.0 A 4.625,4.625 0 0 1 95.625,9.0 V 91.0 A 4.625,4.625 0 0 1 91.0,95.625 H 9.0 A 4.625,4.625 0 0 1 4.375,91.0 V 9.0 A 4.625,4.625 0 0 1 9.0,4.375 Z" fill="#000000" fill-opacity="0.430" fill-rule="evenodd"/>
+  <path d="M 9.0,4.375 H 91.0 A 4.625,4.625 0 0 1 95.625,9.0 V 91.0 A 4.625,4.625 0 0 1 91.0,95.625 H 9.0 A 4.625,4.625 0 0 1 4.375,91.0 V 9.0 A 4.625,4.625 0 0 1 9.0,4.375 Z M 9.0,4.8125 H 91.0 A 4.1875,4.1875 0 0 1 95.1875,9.0 V 91.0 A 4.1875,4.1875 0 0 1 91.0,95.1875 H 9.0 A 4.1875,4.1875 0 0 1 4.8125,91.0 V 9.0 A 4.1875,4.1875 0 0 1 9.0,4.8125 Z" fill="#000000" fill-opacity="0.451" fill-rule="evenodd"/>
+  <path d="M 9.0,4.8125 H 91.0 A 4.1875,4.1875 0 0 1 95.1875,9.0 V 91.0 A 4.1875,4.1875 0 0 1 91.0,95.1875 H 9.0 A 4.1875,4.1875 0 0 1 4.8125,91.0 V 9.0 A 4.1875,4.1875 0 0 1 9.0,4.8125 Z M 9.0,5.25 H 91.0 A 3.75,3.75 0 0 1 94.75,9.0 V 91.0 A 3.75,3.75 0 0 1 91.0,94.75 H 9.0 A 3.75,3.75 0 0 1 5.25,91.0 V 9.0 A 3.75,3.75 0 0 1 9.0,5.25 Z" fill="#000000" fill-opacity="0.469" fill-rule="evenodd"/>
+  <path d="M 9.0,5.25 H 91.0 A 3.75,3.75 0 0 1 94.75,9.0 V 91.0 A 3.75,3.75 0 0 1 91.0,94.75 H 9.0 A 3.75,3.75 0 0 1 5.25,91.0 V 9.0 A 3.75,3.75 0 0 1 9.0,5.25 Z M 9.0,5.6875 H 91.0 A 3.3125,3.3125 0 0 1 94.3125,9.0 V 91.0 A 3.3125,3.3125 0 0 1 91.0,94.3125 H 9.0 A 3.3125,3.3125 0 0 1 5.6875,91.0 V 9.0 A 3.3125,3.3125 0 0 1 9.0,5.6875 Z" fill="#000000" fill-opacity="0.482" fill-rule="evenodd"/>
+  <path d="M 9.0,5.6875 H 91.0 A 3.3125,3.3125 0 0 1 94.3125,9.0 V 91.0 A 3.3125,3.3125 0 0 1 91.0,94.3125 H 9.0 A 3.3125,3.3125 0 0 1 5.6875,91.0 V 9.0 A 3.3125,3.3125 0 0 1 9.0,5.6875 Z M 9.0,6.125 H 91.0 A 2.875,2.875 0 0 1 93.875,9.0 V 91.0 A 2.875,2.875 0 0 1 91.0,93.875 H 9.0 A 2.875,2.875 0 0 1 6.125,91.0 V 9.0 A 2.875,2.875 0 0 1 9.0,6.125 Z" fill="#000000" fill-opacity="0.492" fill-rule="evenodd"/>
+  <path d="M 9.0,6.125 H 91.0 A 2.875,2.875 0 0 1 93.875,9.0 V 91.0 A 2.875,2.875 0 0 1 91.0,93.875 H 9.0 A 2.875,2.875 0 0 1 6.125,91.0 V 9.0 A 2.875,2.875 0 0 1 9.0,6.125 Z M 9.0,6.5625 H 91.0 A 2.4375,2.4375 0 0 1 93.4375,9.0 V 91.0 A 2.4375,2.4375 0 0 1 91.0,93.4375 H 9.0 A 2.4375,2.4375 0 0 1 6.5625,91.0 V 9.0 A 2.4375,2.4375 0 0 1 9.0,6.5625 Z" fill="#000000" fill-opacity="0.498" fill-rule="evenodd"/>
+  <path d="M 9.0,6.5625 H 91.0 A 2.4375,2.4375 0 0 1 93.4375,9.0 V 91.0 A 2.4375,2.4375 0 0 1 91.0,93.4375 H 9.0 A 2.4375,2.4375 0 0 1 6.5625,91.0 V 9.0 A 2.4375,2.4375 0 0 1 9.0,6.5625 Z M 9.0,7.0 H 91.0 A 2.0,2.0 0 0 1 93.0,9.0 V 91.0 A 2.0,2.0 0 0 1 91.0,93.0 H 9.0 A 2.0,2.0 0 0 1 7.0,91.0 V 9.0 A 2.0,2.0 0 0 1 9.0,7.0 Z" fill="#000000" fill-opacity="0.500" fill-rule="evenodd"/>
+  <path d="M 9.0,7.0 H 91.0 A 2.0,2.0 0 0 1 93.0,9.0 V 91.0 A 2.0,2.0 0 0 1 91.0,93.0 H 9.0 A 2.0,2.0 0 0 1 7.0,91.0 V 9.0 A 2.0,2.0 0 0 1 9.0,7.0 Z" fill="#000000" fill-opacity="0.500"/>
+<g transform="translate(9.44,-2.62)">
+  <g
+     id="g20"
+     transform="rotate(-42,29.65855,46.414259)"
+     style="opacity:0.11"
+     fill="none"
+     stroke="#ffffff"
+     stroke-width="6"
+     stroke-linecap="round">
+    <circle
+       id="bubble"
+       cx="13.561645"
+       cy="-46.413486"
+       r="21"
+       transform="rotate(119.6831)" />
+    <g
+       id="spokes"
+       transform="rotate(119.6831,32,33.85)">
+      <line
+         x1="35.299999"
+         y1="26.4"
+         x2="40.299999"
+         y2="17.700001"
+         id="line1" />
+      <line
+         x1="35.299999"
+         y1="37.599998"
+         x2="41"
+         y2="47.599998"
+         id="line2" />
+      <line
+         x1="25.5"
+         y1="32"
+         x2="15.5"
+         y2="32"
+         id="line3" />
+    </g>
+    <path
+       id="tail"
+       d="M 14.983264,40.380176 14.958931,29.316298 1.6188596,34.949459 Z"
+       fill="#ffffff"
+       stroke="none" />
+    <circle
+       id="hub"
+       cx="13.561645"
+       cy="-46.413486"
+       r="4.5"
+       fill="none"
+       stroke-width="3"
+       transform="rotate(119.6831)" />
+  </g>
+  <g
+     id="g20-6"
+     transform="rotate(-42,45.002638,40.524216)"
+     style="opacity:0.33"
+     fill="none"
+     stroke="#ffffff"
+     stroke-width="6"
+     stroke-linecap="round">
+    <circle
+       id="bubble-9"
+       cx="13.561645"
+       cy="-46.413486"
+       r="21"
+       transform="rotate(119.6831)" />
+    <g
+       id="spokes-3"
+       transform="rotate(119.6831,32,33.85)">
+      <line
+         x1="35.299999"
+         y1="26.4"
+         x2="40.299999"
+         y2="17.700001"
+         id="line1-7" />
+      <line
+         x1="35.299999"
+         y1="37.599998"
+         x2="41"
+         y2="47.599998"
+         id="line2-4" />
+      <line
+         x1="25.5"
+         y1="32"
+         x2="15.5"
+         y2="32"
+         id="line3-5" />
+    </g>
+    <path
+       id="tail-2"
+       d="M 14.983264,40.380176 14.958931,29.316298 1.6188596,34.949459 Z"
+       fill="#ffffff"
+       stroke="none" />
+    <circle
+       id="hub-5"
+       cx="13.561645"
+       cy="-46.413486"
+       r="4.5"
+       fill="none"
+       stroke-width="3"
+       transform="rotate(119.6831)" />
+  </g>
+  <g
+     id="g20-7"
+     transform="rotate(-42,60.346726,34.634172)"
+     fill="none"
+     stroke="#ffffff"
+     stroke-width="6"
+     stroke-linecap="round">
+    <circle
+       id="bubble-4"
+       cx="13.561645"
+       cy="-46.413486"
+       r="21"
+       transform="rotate(119.6831)" />
+    <g
+       id="spokes-4"
+       transform="rotate(119.6831,32,33.85)">
+      <line
+         x1="35.299999"
+         y1="26.4"
+         x2="40.299999"
+         y2="17.700001"
+         id="line1-3" />
+      <line
+         x1="35.299999"
+         y1="37.599998"
+         x2="41"
+         y2="47.599998"
+         id="line2-0" />
+      <line
+         x1="25.5"
+         y1="32"
+         x2="15.5"
+         y2="32"
+         id="line3-7" />
+    </g>
+    <path
+       id="tail-8"
+       d="M 14.983264,40.380176 14.958931,29.316298 1.6188596,34.949459 Z"
+       fill="#ffffff"
+       stroke="none" />
+    <circle
+       id="hub-6"
+       cx="13.561645"
+       cy="-46.413486"
+       r="4.5"
+       fill="none"
+       stroke-width="3"
+       transform="rotate(119.6831)" />
+  </g>
+  </g>
+</svg>

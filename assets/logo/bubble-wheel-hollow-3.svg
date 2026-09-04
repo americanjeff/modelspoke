@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  ModelSpoke icon — "Bubble Wheel, hollow hub" (owner-selected 2026-08-26,
+  wordmark font: IBM Plex Sans, semibold).
+
+  Source: research/logo-spike (candidates/bubble-wheel-hollow.svg is the raw
+  candidate; this is the same geometry, grouped + annotated for editing).
+
+  How to play with it:
+  - 64x64 viewBox; everything is stroked with `currentColor`, so the mark
+    inherits whatever color its container gives it. Render at any size.
+  - The two knobs that define the mark:
+      stroke-width 6  (outer shell + spokes — the "weight" of the mark)
+      hub stroke-width 3 + r 4.5  (the hollow bearing ring; keep the gap
+        between hub outer edge (r 6) and the spoke inner ends readable, or
+        the hub collapses to a blob below ~16px)
+  - Groups: #bubble (shell), #spokes (three, at ~120° with a 30° tilt so
+    the wheel reads as rotating), #tail (the filled speech-bubble tail),
+    #hub (hollow ring).
+-->
+
+<!-- Bounding-box fix (orchestrator 2026-08-26): the three -42° rotations
+     pivoted the composition into the lower-right corner, so the full-opacity
+     mark overflowed the original 64x64 box by 7.75 units at the bottom (and
+     0.5 at the right). Content bbox measured from the render:
+     x 1.0..64.5, y 11.25..71.75. Viewbox expanded to a centered square
+     (71.5x71.5, ~4-5.5 units margin); the artwork is untouched. -->
+<svg
+   viewBox="-3 5.75 71.5 71.5"
+   fill="none"
+   stroke="currentColor"
+   stroke-width="6"
+   stroke-linecap="round"
+   version="1.1"
+   id="svg3"
+   sodipodi:docname="bubble-wheel-hollow-3.svg"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs3" />
+  <sodipodi:namedview
+     id="namedview3"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showguides="true"
+     inkscape:zoom="16.782738"
+     inkscape:cx="24.876752"
+     inkscape:cy="46.50612"
+     inkscape:window-width="2033"
+     inkscape:window-height="1710"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg3" />
+  <!-- speech-bubble shell -->
+  <!-- three spokes (upper-right, lower-right, left) -->
+  <!-- filled tail, breaking the shell at lower-right -->
+  <!-- hollow hub: a bearing, not an axle dot (thinner stroke, r 4.5) -->
+  <g
+     id="g20"
+     transform="rotate(-42,29.65855,46.414259)"
+     style="opacity:0.11">
+    <circle
+       id="bubble"
+       cx="13.561645"
+       cy="-46.413486"
+       r="21"
+       transform="rotate(119.6831)" />
+    <g
+       id="spokes"
+       transform="rotate(119.6831,32,33.85)">
+      <line
+         x1="35.299999"
+         y1="26.4"
+         x2="40.299999"
+         y2="17.700001"
+         id="line1" />
+      <line
+         x1="35.299999"
+         y1="37.599998"
+         x2="41"
+         y2="47.599998"
+         id="line2" />
+      <line
+         x1="25.5"
+         y1="32"
+         x2="15.5"
+         y2="32"
+         id="line3" />
+    </g>
+    <path
+       id="tail"
+       d="M 14.983264,40.380176 14.958931,29.316298 1.6188596,34.949459 Z"
+       fill="currentColor"
+       stroke="none" />
+    <circle
+       id="hub"
+       cx="13.561645"
+       cy="-46.413486"
+       r="4.5"
+       fill="none"
+       stroke-width="3"
+       transform="rotate(119.6831)" />
+  </g>
+  <g
+     id="g20-6"
+     transform="rotate(-42,45.002638,40.524216)"
+     style="opacity:0.33">
+    <circle
+       id="bubble-9"
+       cx="13.561645"
+       cy="-46.413486"
+       r="21"
+       transform="rotate(119.6831)" />
+    <g
+       id="spokes-3"
+       transform="rotate(119.6831,32,33.85)">
+      <line
+         x1="35.299999"
+         y1="26.4"
+         x2="40.299999"
+         y2="17.700001"
+         id="line1-7" />
+      <line
+         x1="35.299999"
+         y1="37.599998"
+         x2="41"
+         y2="47.599998"
+         id="line2-4" />
+      <line
+         x1="25.5"
+         y1="32"
+         x2="15.5"
+         y2="32"
+         id="line3-5" />
+    </g>
+    <path
+       id="tail-2"
+       d="M 14.983264,40.380176 14.958931,29.316298 1.6188596,34.949459 Z"
+       fill="currentColor"
+       stroke="none" />
+    <circle
+       id="hub-5"
+       cx="13.561645"
+       cy="-46.413486"
+       r="4.5"
+       fill="none"
+       stroke-width="3"
+       transform="rotate(119.6831)" />
+  </g>
+  <g
+     id="g20-7"
+     transform="rotate(-42,60.346726,34.634172)">
+    <circle
+       id="bubble-4"
+       cx="13.561645"
+       cy="-46.413486"
+       r="21"
+       transform="rotate(119.6831)" />
+    <g
+       id="spokes-4"
+       transform="rotate(119.6831,32,33.85)">
+      <line
+         x1="35.299999"
+         y1="26.4"
+         x2="40.299999"
+         y2="17.700001"
+         id="line1-3" />
+      <line
+         x1="35.299999"
+         y1="37.599998"
+         x2="41"
+         y2="47.599998"
+         id="line2-0" />
+      <line
+         x1="25.5"
+         y1="32"
+         x2="15.5"
+         y2="32"
+         id="line3-7" />
+    </g>
+    <path
+       id="tail-8"
+       d="M 14.983264,40.380176 14.958931,29.316298 1.6188596,34.949459 Z"
+       fill="currentColor"
+       stroke="none" />
+    <circle
+       id="hub-6"
+       cx="13.561645"
+       cy="-46.413486"
+       r="4.5"
+       fill="none"
+       stroke-width="3"
+       transform="rotate(119.6831)" />
+  </g>
+</svg>

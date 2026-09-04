@@ -1,0 +1,18 @@
+# modelspoke bundle patch layer: the single plugin row that mounts the
+# modelspoke dsh adapter.
+#
+# The row is the BARE package name: dsh resolves it to `main`
+# (dist/dsh/index.js — the dsh plugin entry, the same file the row loaded
+# explicitly before the repackage) as its node half, and the web app's client
+# scanner keys the same row's name to `require.resolve('modelspoke/package.json')`
+# to pick up the browser half (`dsh.client` + the `./client` export —
+# docs/dsh-plugin-guidance.md §2.1). Dual-face package, one row.
+#
+# No config row: the bundle boots dormant (zero routes — the composition
+# entry is absent and the plugin's schema defaults apply), exactly like the
+# in-box `llm-pi-ai` row. A `modelspoke:` section in the user's settings
+# (routes/overrides) brings the routes to life at boot or hot-reload, and
+# the Tier-3 migration seeds it from the hand-written llm-pi-ai block.
+- insert:
+    - id: modelspoke
+      name: 'modelspoke'

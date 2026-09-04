@@ -1,0 +1,133 @@
+# Tier-3 E2E target state: the test home's settings AFTER the migration.
+# Reference fixture for the integration phase — the migration transform is
+# baseline/settings.yaml → this file, and the test asserts a live session
+# works from it.
+#
+# Transform (design.md "First-use import", Tier 3):
+#   1. DELETE the hand-written `llm-pi-ai.providers.llama-swap` block from
+#      the baseline (it becomes a modelspoke route).
+#   2. ADD the `modelspoke:` namespace: the route + override entries seeded
+#      from config/llama-swap.yaml metadata blocks (firstUseImport output —
+#      this file was generated from the built core against the baseline
+#      block + the real llama-swap.yaml, 2026-08).
+#   3. `agent-default-model` is UNCHANGED — the route keeps the name
+#      `llama-swap`, so the existing reference keeps working untouched.
+#   4. The `ollama` provider (unrelated to modelspoke) is untouched.
+#
+# Sourcing decision (recorded 2026-08): the import seeds FULL canonical
+# overrides (not name-only). Rationale: llama-swap renders the yaml metadata
+# into meta.llamaswap for every model (loaded or not — live fixture shows
+# the unloaded qwen3.8-27b-mtp carrying the full block), so the imported
+# values are provably identical to what live discovery reports (the oracle's
+# "imported flagship override MIRRORS the wire" test) — resolution is
+# identical either way, and the overrides additionally serve same-id models
+# on BARE server routes where discovery sees nothing (the design's
+# "models that discovery can't see" purpose). Cost: on the proxy route the
+# source map reports `user` for imported fields (they live in the user's
+# settings.yaml — an accurate label), so the resolve-time log for
+# qwen3.8-27b-6000pro shows user-tier sources, not discovery-tier.
+#
+# Expected observable outcomes during the E2E run:
+#   - the resolved model for qwen3.8-27b-6000pro equals the hand-written
+#     block field-by-field (golden oracle, now live),
+#   - the resolve-time log line reports per-field sources (user tier for
+#     the imported fields; the modelspoke catalog is still discovery-driven
+#     — /v1/models is still interrogated for the route's model list),
+#   - the model description carries the source suffix,
+#   - no per-model config exists anywhere outside modelspoke:.
+ui-onboarding:
+  welcomeNoticeVersion: 2026-08-13.1
+llm-pi-ai:
+  providers:
+    # NOTE: the hand-written llama-swap provider block is GONE here —
+    # modelspoke now owns this route.
+    ollama:
+      displayName: ollama
+      apiKeyEnv: OLLAMA_API_KEY
+      api: openai-completions
+      baseURL: http://127.0.0.1:11434/v1
+      models:
+        - { id: deepseek-v4-flash:cloud }
+        - { id: kimi-k3:cloud }
+        - { id: glm-5.2:cloud }
+        - { id: deepseek-v4-pro:cloud }
+modelspoke:
+  routes:
+    - name: llama-swap
+      baseURL: http://127.0.0.1:8080/v1
+      apiKeyEnv: LLAMA_SWAP_API_KEY   # kept from the baseline — auth behavior unchanged
+      defaultEffort: medium           # from the baseline's `reasoning: medium`
+  overrides:
+    qwen3.8-27b-6000pro:
+      name: qwen3.8-27b   # display cosmetics carried over from the hand-written block
+      input: [text, image]
+      reasoning: true
+      contextWindow: 262144
+      maxTokens: 65536
+      thinkingLevelMap: { off: low, low: low, medium: medium, xhigh: xhigh }
+      compat:
+        supportsDeveloperRole: false
+        supportsReasoningEffort: false
+        thinkingFormat: chat-template
+        chatTemplateKwargs:
+          enable_thinking: { $var: thinking.enabled }
+          reasoning_effort: { $var: thinking.effort, omitWhenOff: true }
+          preserve_thinking: true
+    qwen3.8-27b-mtp:
+      input: [text, image]
+      reasoning: true
+      contextWindow: 262144
+      maxTokens: 131072
+      thinkingLevelMap: { off: low, low: low, medium: medium, xhigh: xhigh }
+      compat:
+        supportsDeveloperRole: false
+        supportsReasoningEffort: false
+        thinkingFormat: chat-template
+        chatTemplateKwargs:
+          enable_thinking: { $var: thinking.enabled }
+          reasoning_effort: { $var: thinking.effort, omitWhenOff: true }
+          preserve_thinking: true
+    qwen3.8-27b-mtp-nothink:
+      input: [text, image]
+      contextWindow: 262144
+      maxTokens: 131072
+    qwen3.6-27b-mtp:
+      input: [text, image]
+      contextWindow: 262144
+      maxTokens: 131072
+    qwen3.6-27b-mtp-nothink:
+      input: [text, image]
+      contextWindow: 262144
+      maxTokens: 131072
+    qwen3-coder-next:
+      input: [text]
+      contextWindow: 262144
+      maxTokens: 131072
+    qwen3.6-35b-mtp:
+      input: [text, image]
+      contextWindow: 131072
+      maxTokens: 131072
+    qwen3.6-40B-Deckard-mtp:
+      input: [text]
+      contextWindow: 262144
+      maxTokens: 131072
+    gpt-oss-120b:
+      input: [text]
+      contextWindow: 131072
+      maxTokens: 65536
+    laguna-s-2.1:
+      input: [text]
+      contextWindow: 262144
+      maxTokens: 131072
+    laguna-s-2.1-nothink:
+      input: [text]
+      contextWindow: 262144
+      maxTokens: 131072
+    gemma-4-E4B-it:
+      input: [text]
+    gemma-4-E4B-it-XL:
+      input: [text]
+agent-default-model:
+  provider: llama-swap
+  model: qwen3.8-27b-6000pro
+  reasoningEffort: medium

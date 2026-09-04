@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "description": "Provenance manifest for the built-in preset catalog. Each entry pins the template artifact(s) its catalog entry was authored from — the pin is the contract. scripts/preset-drift-check.ts fetches every pinned artifact (hub copies BY COMMIT, never branch head; GGUF copies by repo file, because a re-quantization re-uploads the file and the embedded-template sha is the contract), re-derives the mechanical invariants (docs/design.md, 'Moved from code' — the drift-invariants subsection: the 'Template -> metadata feasibility' table), and diffs them against the catalog entry. sha256 is over the EXACT template text: the hub file bytes, or the GGUF-embedded tokenizer.chat_template string (verified 2026-09 against both the local HF cache and the live resolve endpoint). The tool never writes or suggests preset content: on drift a human re-runs the preset authoring pass (docs/preset-authoring.md) against the new template. Invariants NOT mechanically extractable (spike feasibility table: the level->value cross-vocabulary mapping, the gpt-oss {low,medium,high} vocabulary — prose, not template — and the maxTokens policy) are deliberately NOT asserted here or by the tool.",
+  "entries": [
+    {
+      "presetId": "qwen3.8-chat-template",
+      "family": "qwen",
+      "contracts": [
+        {
+          "kind": "hub",
+          "repo": "Qwen/Qwen3.8-27B",
+          "commit": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+          "file": "chat_template.jinja",
+          "sha256": "c3cf9e34abf4f9e36c2d72165aa9c132d3e2a725b6c2586aaa3a8af9d7a81041",
+          "note": "Hub base repo. Pin == repo head, verified byte-identical 2026-09 (the spike's open question 7: head moved 2026-08-14 but the template stayed identical; re-verified live at drift-check build time)."
+        },
+        {
+          "kind": "hub",
+          "repo": "Qwen/Qwen3.8-27B-FP8",
+          "commit": "017b9c7af6b5689d5dd426a76e0bc077eb5ca20a",
+          "file": "chat_template.jinja",
+          "sha256": "c3cf9e34abf4f9e36c2d72165aa9c132d3e2a725b6c2586aaa3a8af9d7a81041",
+          "note": "The sglang deployment repo (server-side copy). Pin == repo head; byte-identical to the base-repo jinja."
+        },
+        {
+          "kind": "gguf",
+          "repo": "unsloth/Qwen3.8-27B-GGUF",
+          "file": "Qwen3.8-27B-UD-Q8_K_XL.gguf",
+          "sha256": "12827f24b742ea4e80cdc12dbcf9622227056b9f797252a3149263d4f9aaadce",
+          "note": "What llama-server --jinja serves (GGUF-embedded tokenizer.chat_template, 9993 chars). Diverges from the hub copies by design: 'Unsloth fixes' add a 'high'->'xhigh' alias before the raise-guard (the hub copies RAISE on 'high'). The catalog's effort values (low/medium/xhigh) are valid against both — the drift checker verifies that and reports the divergence as informational, not drift."
+        }
+      ]
+    },
+    {
+      "presetId": "qwen3.6-chat-template",
+      "family": "qwen",
+      "contracts": [
+        {
+          "kind": "hub",
+          "repo": "Qwen/Qwen3.6-27B-FP8",
+          "commit": "e89b16ebf1988b3d6befa7de50abc2d76f26eb09",
+          "file": "chat_template.jinja",
+          "sha256": "e84f32a23fdda27689f868aa4a1a5621f41133e51a48d7f3efcbea2839574259",
+          "note": "The three Qwen 3.6 hub jinjas (27B-FP8, 35B-A3B, 35B-A3B-FP8) were verified byte-identical at authoring (authoring evidence: jj history, v0.2-presets.md §1); both sglang-style (FP8) repos are pinned. Pins == repo heads, verified live 2026-09."
+        },
+        {
+          "kind": "hub",
+          "repo": "Qwen/Qwen3.6-35B-A3B-FP8",
+          "commit": "95a723d08a9490559dae23d0cff1d9466213d989",
+          "file": "chat_template.jinja",
+          "sha256": "e84f32a23fdda27689f868aa4a1a5621f41133e51a48d7f3efcbea2839574259"
+        },
+        {
+          "kind": "gguf",
+          "repo": "unsloth/Qwen3.6-27B-MTP-GGUF",
+          "file": "Qwen3.6-27B-UD-Q8_K_XL.gguf",
+          "sha256": "55d4931433fe502b794226ee7f4d206a6bdd436ac9f80eb7d8ebb4c639f9ea0c",
+          "note": "llama-server deployment copy for qwen3.6-27b-mtp. Byte-identical to the 35B-A3B variant below — same template, so one preset, one contract (per-template rule)."
+        },
+        {
+          "kind": "gguf",
+          "repo": "unsloth/Qwen3.6-35B-A3B-MTP-GGUF",
+          "file": "Qwen3.6-35B-A3B-Q8_0.gguf",
+          "sha256": "55d4931433fe502b794226ee7f4d206a6bdd436ac9f80eb7d8ebb4c639f9ea0c"
+        }
+      ]
+    },
+    {
+      "presetId": "qwen3.5-chat-template",
+      "family": "qwen",
+      "contracts": [
+        {
+          "kind": "gguf",
+          "repo": "unsloth/Qwen3.5-4B-GGUF",
+          "file": "Qwen3.5-4B-UD-Q4_K_XL.gguf",
+          "sha256": "7f0e529032c25183bcd66c7f238da2d377f43be754a94e2725a58c4e16d2ed67",
+          "note": "The authoring artifact (the only local 3.5 artifact at authoring time). INVERTED enable_thinking polarity vs the hub copy: UNDEFINED enable_thinking = nothink here."
+        },
+        {
+          "kind": "hub",
+          "repo": "Qwen/Qwen3.5-4B",
+          "commit": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+          "file": "chat_template.jinja",
+          "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+          "note": "Official hub copy — DIVERGES from the GGUF copy in the UNDEFINED enable_thinking state (hub: undefined -> think; GGUF: undefined -> nothink) and in tool-call argument rendering (|items vs mapping iteration). The catalog's values (explicit boolean, no effort kwarg, no preserve_thinking) are valid against BOTH copies, but the binding must never omit enable_thinking (it does not: no omitWhenOff) — the divergence is contract-relevant in exactly that sense and the checker reports it as informational. Pin == repo head, verified live 2026-09. If a deployment ever serves the hub copy (or a new 3.5 artifact with a different template — docs/preset-authoring.md, 'Known open questions'), re-verify the entry against it."
+        }
+      ]
+    },
+    {
+      "presetId": "gpt-oss-120b-chat-template",
+      "family": "gpt-oss",
+      "contracts": [
+        {
+          "kind": "hub",
+          "repo": "openai/gpt-oss-120b",
+          "commit": "b5c939de8f754692c1647ca79fbf85e8c1e70f8a",
+          "file": "chat_template.jinja",
+          "sha256": "a4c9919cbbd4acdd51ccffe22da049264b1b73e59055fa58811a99efbd7c8146",
+          "note": "Standalone jinja (the repo's API metadata embeds NO template — spike). Pin == repo head (2025-08-26), verified live 2026-09. Byte-identical to the GGUF-embedded copy below, so the two pins share one sha."
+        },
+        {
+          "kind": "gguf",
+          "repo": "ggml-org/gpt-oss-120b-GGUF",
+          "file": "gpt-oss-120b-MXFP4.gguf",
+          "sha256": "a4c9919cbbd4acdd51ccffe22da049264b1b73e59055fa58811a99efbd7c8146",
+          "note": "The deployment artifact (local MXFP4 gguf; KV section sits ~13 MB in, after the vocab arrays). The template does NOT validate reasoning_effort: the {low,medium,high} vocabulary is human-authored from the repo README (prose) — the checker verifies the kwarg name and the 'medium' default, never the vocabulary (spike feasibility table, item 2)."
+        }
+      ]
+    }
+  ]
+}

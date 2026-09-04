@@ -1,0 +1,104 @@
+{
+  "corpus": "modelspoke-discovery-conformance",
+  "formatVersion": 1,
+  "backend": "vllm",
+  "fixtures": {
+    "VLLM_QWEN3": {
+      "id": "Qwen/Qwen3-8B",
+      "object": "model",
+      "created": 1754600000,
+      "owned_by": "vllm",
+      "parent": null,
+      "max_model_len": 40960,
+      "permission": [
+        {
+          "id": "modelperm-4b33f5a1",
+          "object": "model_permission",
+          "allow_create_engine": true,
+          "allow_sampling": true,
+          "allow_logprobs": true,
+          "allow_search_indices": false,
+          "allow_view": true,
+          "allow_fine_tuning": false,
+          "organization": "*",
+          "group": null,
+          "is_blocking": false
+        }
+      ]
+    },
+    "VLLM_OWNED_BY_ONLY": { "id": "my-alias", "object": "model", "created": 1754600001, "owned_by": "vllm" },
+    "VLLM_MAX_MODEL_LEN_ONLY": {
+      "id": "legacy-served-name",
+      "object": "model",
+      "created": 1754600002,
+      "owned_by": "user",
+      "max_model_len": 131072
+    },
+    "BARE_GPT4O": { "id": "gpt-4o", "object": "model", "created": 1234567890, "owned_by": "user" },
+    "BARE_EMBEDDING": { "id": "text-embedding-3-small", "object": "model", "created": 1234567891, "owned_by": "user" },
+    "BARE_OPENAI_CATALOG": ["$BARE_GPT4O", "$BARE_EMBEDDING"],
+    "LLAMASWAP_GEMMA": {
+      "id": "gemma4:e4b",
+      "object": "model",
+      "created": 1754600100,
+      "owned_by": "llama-swap",
+      "context_length": 131072,
+      "capabilities": { "function_calling": true },
+      "meta": { "llamaswap": { "type": "model", "reasoning": true } },
+      "status": { "value": "loaded" }
+    },
+    "LLAMASWAP_QWEN": {
+      "id": "qwen3.8",
+      "object": "model",
+      "created": 1754600101,
+      "owned_by": "llama-swap",
+      "context_length": 262144,
+      "meta": { "llamaswap": { "reasoning": true, "maxTokens": 65536 } }
+    },
+    "LLAMA_SWAP_CATALOG": ["$LLAMASWAP_GEMMA", "$LLAMASWAP_QWEN"],
+    "MIXED_LLAMASWAP_VLLM": ["$LLAMASWAP_GEMMA", "$LLAMASWAP_QWEN", "$VLLM_QWEN3"],
+    "MIXED_BARE_VLLM": ["$BARE_GPT4O", "$BARE_EMBEDDING", "$VLLM_MAX_MODEL_LEN_ONLY"],
+    "VLLM_CHANNEL_LLM_ENTRY": {
+      "id": "meta-llama/Llama-3.1-8B-Instruct",
+      "object": "model",
+      "created": 1754600001,
+      "owned_by": "vllm",
+      "max_model_len": 131072
+    },
+    "VLLM_CHANNEL_CATALOG": ["$VLLM_QWEN3", "$VLLM_CHANNEL_LLM_ENTRY", "$VLLM_OWNED_BY_ONLY"]
+  },
+  "vectors": [
+    { "id": "entryMatches/owned-by", "op": "vllm.entryMatches", "suite": "vllmEntryMatches (per-entry signatures)", "title": "matches on owned_by 'vllm'", "input": { "entry": { "id": "m", "owned_by": "vllm" } }, "expect": { "eq": true } },
+    { "id": "entryMatches/max-model-len-alone", "op": "vllm.entryMatches", "suite": "vllmEntryMatches (per-entry signatures)", "title": "matches on max_model_len regardless of owned_by (either signature suffices)", "input": { "entry": { "id": "m", "owned_by": "user", "max_model_len": 4096 } }, "expect": { "eq": true } },
+    { "id": "entryMatches/neither-user", "op": "vllm.entryMatches", "suite": "vllmEntryMatches (per-entry signatures)", "title": "neither signature → no match (owned_by is an EXACT string compare) — owned_by user", "input": { "entry": { "id": "m", "owned_by": "user" } }, "expect": { "eq": false } },
+    { "id": "entryMatches/neither-bare", "op": "vllm.entryMatches", "suite": "vllmEntryMatches (per-entry signatures)", "title": "neither signature → no match — no owned_by at all", "input": { "entry": { "id": "m" } }, "expect": { "eq": false } },
+    { "id": "entryMatches/neither-vllm-swap", "op": "vllm.entryMatches", "suite": "vllmEntryMatches (per-entry signatures)", "title": "neither signature → no match (owned_by \"vllm-swap\")", "input": { "entry": { "id": "m", "owned_by": "vllm-swap" } }, "expect": { "eq": false } },
+    { "id": "entryMatches/neither-uppercase", "op": "vllm.entryMatches", "suite": "vllmEntryMatches (per-entry signatures)", "title": "neither signature → no match (owned_by \"VLLM\")", "input": { "entry": { "id": "m", "owned_by": "VLLM" } }, "expect": { "eq": false } },
+    { "id": "entryMatches/null-max-model-len-still-matches", "op": "vllm.entryMatches", "suite": "vllmEntryMatches (per-entry signatures)", "title": "the locked rule is spelled max_model_len !== undefined (a null value still matches)", "input": { "entry": { "id": "m", "max_model_len": null } }, "expect": { "eq": true } },
+    { "id": "entryMatches/malformed-null", "op": "vllm.entryMatches", "suite": "vllmEntryMatches (per-entry signatures)", "title": "malformed entries never match (fail-soft C6 — never throws) — null", "input": { "entry": null }, "expect": { "eq": false } },
+    { "id": "entryMatches/malformed-undefined", "op": "vllm.entryMatches", "suite": "vllmEntryMatches (per-entry signatures)", "title": "malformed entries never match — undefined", "input": {}, "expect": { "eq": false } },
+    { "id": "entryMatches/malformed-number", "op": "vllm.entryMatches", "suite": "vllmEntryMatches (per-entry signatures)", "title": "malformed entries never match — 42", "input": { "entry": 42 }, "expect": { "eq": false } },
+    { "id": "entryMatches/malformed-string", "op": "vllm.entryMatches", "suite": "vllmEntryMatches (per-entry signatures)", "title": "malformed entries never match — \"vllm\"", "input": { "entry": "vllm" }, "expect": { "eq": false } },
+    { "id": "entryMatches/malformed-array", "op": "vllm.entryMatches", "suite": "vllmEntryMatches (per-entry signatures)", "title": "malformed entries never match — []", "input": { "entry": [] }, "expect": { "eq": false } },
+    { "id": "detect/owned-by-catalog", "op": "vllm.detect", "suite": "vllmDetect (catalog-level, §6.1 — pure, ZERO fetches)", "title": "matches a catalog whose entries all carry owned_by 'vllm'", "input": { "entries": ["$VLLM_QWEN3", "$VLLM_OWNED_BY_ONLY"] }, "expect": { "eq": true } },
+    { "id": "detect/max-model-len-alone", "op": "vllm.detect", "suite": "vllmDetect (catalog-level, §6.1 — pure, ZERO fetches)", "title": "matches on the max_model_len signature alone", "input": { "entries": ["$VLLM_MAX_MODEL_LEN_ONLY"] }, "expect": { "eq": true } },
+    { "id": "detect/mixed-llamaswap-plus-vllm", "op": "vllm.detect", "suite": "vllmDetect (catalog-level, §6.1 — pure, ZERO fetches)", "title": "matches a mixed catalog: one vLLM entry among llama-swap entries", "input": { "entries": "$MIXED_LLAMASWAP_VLLM" }, "expect": { "eq": true } },
+    { "id": "detect/mixed-bare-plus-vllm", "op": "vllm.detect", "suite": "vllmDetect (catalog-level, §6.1 — pure, ZERO fetches)", "title": "matches a mixed catalog: one max_model_len entry among bare OpenAI entries", "input": { "entries": "$MIXED_BARE_VLLM" }, "expect": { "eq": true } },
+    { "id": "detect/llamaswap-guard", "op": "vllm.detect", "suite": "vllmDetect (catalog-level, §6.1 — pure, ZERO fetches)", "title": "FALSE-POSITIVE GUARD: a llama-swap catalog (meta.llamaswap entries) never matches", "input": { "entries": "$LLAMA_SWAP_CATALOG" }, "expect": { "eq": false } },
+    { "id": "detect/bare-guard", "op": "vllm.detect", "suite": "vllmDetect (catalog-level, §6.1 — pure, ZERO fetches)", "title": "FALSE-POSITIVE GUARD: a bare OpenAI catalog never matches", "input": { "entries": "$BARE_OPENAI_CATALOG" }, "expect": { "eq": false } },
+    { "id": "detect/empty-catalog", "op": "vllm.detect", "suite": "vllmDetect (catalog-level, §6.1 — pure, ZERO fetches)", "title": "an empty catalog never matches", "input": { "entries": [] }, "expect": { "eq": false } },
+    { "id": "detect/malformed-all-garbage", "op": "vllm.detect", "suite": "vllmDetect (catalog-level, §6.1 — pure, ZERO fetches)", "title": "never throws on a malformed catalog (fail-soft C6) — [null, 42, \"m\", []]", "input": { "entries": [null, 42, "m", []] }, "expect": { "eq": false } },
+    { "id": "detect/malformed-mixed-one-match", "op": "vllm.detect", "suite": "vllmDetect (catalog-level, §6.1 — pure, ZERO fetches)", "title": "never throws on a malformed catalog (fail-soft C6) — [null, {owned_by vllm}]", "input": { "entries": [null, { "owned_by": "vllm" }] }, "expect": { "eq": true } },
+    { "id": "detectVerdict/match-true-never-fetches", "op": "vllm.detectVerdict", "suite": "vllmBackend.detect (the contract wrapper — DEFINITIVE, no probe)", "title": "resolves { match: true } for a vLLM-shaped catalog — and NEVER fetches", "input": { "baseUrl": "http://127.0.0.1:8000/v1", "entries": ["$VLLM_QWEN3", "$VLLM_OWNED_BY_ONLY"] }, "expect": { "eq": { "match": true }, "fields": { "inconclusive": null }, "fetchCount": 0 } },
+    { "id": "detectVerdict/llamaswap-definitive-no", "op": "vllm.detectVerdict", "suite": "vllmBackend.detect (the contract wrapper — DEFINITIVE, no probe)", "title": "resolves { match: false } for the false-positive surfaces — DEFINITIVE, never inconclusive (llama-swap catalog)", "input": { "baseUrl": "http://127.0.0.1:8000/v1", "entries": "$LLAMA_SWAP_CATALOG" }, "expect": { "eq": { "match": false }, "fetchCount": 0 } },
+    { "id": "detectVerdict/bare-definitive-no", "op": "vllm.detectVerdict", "suite": "vllmBackend.detect (the contract wrapper — DEFINITIVE, no probe)", "title": "resolves { match: false } for the false-positive surfaces (bare OpenAI catalog)", "input": { "baseUrl": "http://127.0.0.1:8000/v1", "entries": "$BARE_OPENAI_CATALOG" }, "expect": { "eq": { "match": false }, "fetchCount": 0 } },
+    { "id": "detectVerdict/empty-catalog-definitive-no", "op": "vllm.detectVerdict", "suite": "vllmBackend.detect (the contract wrapper — DEFINITIVE, no probe)", "title": "resolves { match: false } for the false-positive surfaces (empty catalog)", "input": { "baseUrl": "http://127.0.0.1:8000/v1", "entries": [] }, "expect": { "eq": { "match": false }, "fetchCount": 0 } },
+    { "id": "rows/positive-maps-fully", "op": "vllm.rows", "suite": "vllmMetadataRows (pure seam)", "title": "maps a positive max_model_len to contextWindow — the FULL canonical object", "input": { "entries": ["$VLLM_QWEN3"] }, "expect": { "byId": [{ "id": "Qwen/Qwen3-8B", "canonical": { "contextWindow": 40960 } }], "byIdSize": 1 } },
+    { "id": "rows/digit-string-coerced", "op": "vllm.rows", "suite": "vllmMetadataRows (pure seam)", "title": "coerces all-digit-string max_model_len through toPositiveInt", "input": { "entries": [{ "id": "m", "max_model_len": "262144" }] }, "expect": { "byId": [{ "id": "m", "canonical": { "contextWindow": 262144 } }], "byIdSize": 1 } },
+    { "id": "rows/bad-values-absent", "op": "vllm.rows", "suite": "vllmMetadataRows (pure seam)", "title": "a non-numeric / non-positive / absent max_model_len is ABSENT from byId (generic row)", "input": { "entries": [{ "id": "zero", "max_model_len": 0 }, { "id": "negative", "max_model_len": -1 }, { "id": "float", "max_model_len": 8.5 }, { "id": "non-numeric", "max_model_len": "abc" }, { "id": "null-ish", "max_model_len": null }, { "id": "absent" }] }, "expect": { "byIdSize": 0 } },
+    { "id": "rows/mixed-catalog", "op": "vllm.rows", "suite": "vllmMetadataRows (pure seam)", "title": "mixed entries: only positive max_model_len ids enrich; the rest keep generic rows", "input": { "entries": ["$VLLM_QWEN3", "$VLLM_OWNED_BY_ONLY", "$BARE_GPT4O"] }, "expect": { "byId": [{ "id": "Qwen/Qwen3-8B", "canonical": { "contextWindow": 40960 } }], "byIdAbsent": ["my-alias", "gpt-4o"] } },
+    { "id": "rows/c5-pin-single-field", "op": "vllm.rows", "suite": "vllmMetadataRows (pure seam)", "title": "C5 pin: the canonical object carries ONLY contextWindow — never the decoy fields", "input": { "entries": [{ "id": "rich", "max_model_len": 32768, "context_length": 4096, "max_tokens": 8192, "capabilities": { "vision": true, "function_calling": true }, "architecture": { "input_modalities": ["text", "image"] }, "meta": { "llamaswap": { "reasoning": true, "maxTokens": 8192 } }, "supported_parameters": ["tools", "reasoning_effort"] }] }, "expect": { "byId": [{ "id": "rich", "canonical": { "contextWindow": 32768 } }], "byIdFields": { "rich": { "maxTokens": null, "compat": null, "reasoning": null, "input": null, "thinkingLevelMap": null } } } },
+    { "id": "rows/malformed-garbage", "op": "vllm.rows", "suite": "vllmMetadataRows (pure seam)", "title": "never throws on a malformed catalog (fail-soft C6)", "input": { "entries": [null, 42, "m"] }, "expect": { "byIdSize": 0 } },
+    { "id": "enrich/byId-no-notes-never-fetches", "op": "vllm.enrich", "suite": "vllmMetadataRows (pure seam)", "title": "vllmBackend.metadataRows returns the byId map with no notes — and NEVER fetches", "input": { "entries": ["$VLLM_QWEN3", "$VLLM_OWNED_BY_ONLY"], "baseUrl": "http://127.0.0.1:8000/v1" }, "fetch": [{ "reply": { "throw": "network" } }], "expect": { "byId": [{ "id": "Qwen/Qwen3-8B", "canonical": { "contextWindow": 40960 } }], "byIdAbsent": ["my-alias"], "notes": null, "fetchCount": 0 } }
+  ]
+}

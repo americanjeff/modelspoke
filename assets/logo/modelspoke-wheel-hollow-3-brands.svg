@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  ModelSpoke lockup — EDITABLE PREVIEW (2026-08-26).
+
+  Purpose: pick the wordmark font + spacing BEFORE rendering to shapes.
+  Open in Inkscape; the wordmark is LIVE TEXT (select with the Text tool):
+    - change font: Text tool ▸ Font family selector
+    - weight: font-weight below (600 = semibold); size: font-size
+    - spacing: letter-spacing attribute, or Text tool ▸ Baselines and spacing
+    - the icon is the grouped depth composition (bubble-wheel-hollow-3.svg,
+      scaled 100/71.5) — edit freely, it is self-contained
+  When settled: select ALL ▸ Path ▸ Object to Path (Ctrl+Alt+C), then
+  save a COPY as modelspoke-lockup.svg (the final, font-independent asset).
+  Do NOT outline this file in place — it is the playground.
+
+  Both icon and text use currentColor: set the fill on the selection
+  (or a CSS color on a wrapper) to theme. Standalone preview renders
+  black-on-white.
+-->
+
+<svg
+   viewBox="0 0 520 100"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="modelspoke-wheel-hollow-3-brands.svg"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="1.9900976"
+     inkscape:cx="168.83594"
+     inkscape:cy="-25.375639"
+     inkscape:window-width="2033"
+     inkscape:window-height="1710"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg1" />
+  <title
+     id="title1">ModelSpoke lockup (editable preview)</title>
+  <!-- icon: depth composition scaled 71.5 -> 100, left-aligned, vertically
+       centered; carries the stroke presentation the source root svg had -->
+  <g
+     id="icon"
+     transform="translate(4.1958,-8.0419) scale(1.3986)"
+     fill="none"
+     stroke="currentColor"
+     stroke-width="6"
+     stroke-linecap="round">
+    <g
+       id="g20"
+       transform="rotate(-42,29.65855,46.414259)"
+       style="opacity:0.11">
+      <circle
+         id="bubble"
+         cx="13.561645"
+         cy="-46.413486"
+         r="21"
+         transform="rotate(119.6831)" />
+      <g
+         id="spokes"
+         transform="rotate(119.6831,32,33.85)">
+        <line
+           x1="35.299999"
+           y1="26.4"
+           x2="40.299999"
+           y2="17.700001"
+           id="line1" />
+        <line
+           x1="35.299999"
+           y1="37.599998"
+           x2="41"
+           y2="47.599998"
+           id="line2" />
+        <line
+           x1="25.5"
+           y1="32"
+           x2="15.5"
+           y2="32"
+           id="line3" />
+      </g>
+      <path
+         id="tail"
+         d="M 14.983264,40.380176 14.958931,29.316298 1.6188596,34.949459 Z"
+         fill="currentColor"
+         stroke="none" />
+      <circle
+         id="hub"
+         cx="13.561645"
+         cy="-46.413486"
+         r="4.5"
+         fill="none"
+         stroke-width="3"
+         transform="rotate(119.6831)" />
+    </g>
+    <g
+       id="g20-6"
+       transform="rotate(-42,45.002638,40.524216)"
+       style="opacity:0.33">
+      <circle
+         id="bubble-9"
+         cx="13.561645"
+         cy="-46.413486"
+         r="21"
+         transform="rotate(119.6831)" />
+      <g
+         id="spokes-3"
+         transform="rotate(119.6831,32,33.85)">
+        <line
+           x1="35.299999"
+           y1="26.4"
+           x2="40.299999"
+           y2="17.700001"
+           id="line1-7" />
+        <line
+           x1="35.299999"
+           y1="37.599998"
+           x2="41"
+           y2="47.599998"
+           id="line2-4" />
+        <line
+           x1="25.5"
+           y1="32"
+           x2="15.5"
+           y2="32"
+           id="line3-5" />
+      </g>
+      <path
+         id="tail-2"
+         d="M 14.983264,40.380176 14.958931,29.316298 1.6188596,34.949459 Z"
+         fill="currentColor"
+         stroke="none" />
+      <circle
+         id="hub-5"
+         cx="13.561645"
+         cy="-46.413486"
+         r="4.5"
+         fill="none"
+         stroke-width="3"
+         transform="rotate(119.6831)" />
+    </g>
+    <g
+       id="g20-7"
+       transform="rotate(-42,60.346726,34.634172)">
+      <circle
+         id="bubble-4"
+         cx="13.561645"
+         cy="-46.413486"
+         r="21"
+         transform="rotate(119.6831)" />
+      <g
+         id="spokes-4"
+         transform="rotate(119.6831,32,33.85)">
+        <line
+           x1="35.299999"
+           y1="26.4"
+           x2="40.299999"
+           y2="17.700001"
+           id="line1-3" />
+        <line
+           x1="35.299999"
+           y1="37.599998"
+           x2="41"
+           y2="47.599998"
+           id="line2-0" />
+        <line
+           x1="25.5"
+           y1="32"
+           x2="15.5"
+           y2="32"
+           id="line3-7" />
+      </g>
+      <path
+         id="tail-8"
+         d="M 14.983264,40.380176 14.958931,29.316298 1.6188596,34.949459 Z"
+         fill="currentColor"
+         stroke="none" />
+      <circle
+         id="hub-6"
+         cx="13.561645"
+         cy="-46.413486"
+         r="4.5"
+         fill="none"
+         stroke-width="3"
+         transform="rotate(119.6831)" />
+    </g>
+  </g>
+  <!-- wordmark: LIVE TEXT. IBM Plex Sans 600 (installed system-wide on this
+       machine); gap icon->text = 30 (0.3x icon width, spike convention);
+       dominant-baseline central keeps it vertically centered when you
+       swap fonts. Change x to taste. -->
+  <text
+     id="wordmark"
+     x="96.597504"
+     y="65.947678"
+     dominant-baseline="central"
+     font-family="'IBM Plex Sans'"
+     font-weight="600"
+     font-size="68px"
+     letter-spacing="0"
+     fill="currentColor"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:53.3333px;font-family:'Font Awesome 7 Brands';-inkscape-font-specification:'Font Awesome 7 Brands, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;letter-spacing:0;dominant-baseline:central;fill:currentColor">modelspoke</text>
+</svg>
