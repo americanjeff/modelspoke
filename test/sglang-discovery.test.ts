@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { Context } from "@deepseek-ai/cordis";
 import { makeChannelHandler } from "../src/dsh/channel.js";
 import type { DiscoveryBackend } from "../src/discovery/backends.js";
 import { ollamaBackend } from "../src/discovery/ollama.js";
@@ -309,11 +308,6 @@ const SGLANG_SECTION = {
   overrides: {},
 };
 
-/** A minimal fake Context (the channel handler only ctx.get()s services). */
-function fakeCtx(): Context {
-  return { get: () => undefined, on: () => () => undefined } as unknown as Context;
-}
-
 function stubSglangFetch(config: {
   modelInfo?: (url: string) => Response;
   alias?: (url: string) => Response;
@@ -353,7 +347,7 @@ describe("discoverMetadata channel handler — the SGLang branch (pinned backend
   const makeHandler = (
     log: (line: string) => void = () => undefined,
     backends: readonly DiscoveryBackend[] = [sglangBackend],
-  ) => makeChannelHandler(fakeCtx(), { section: () => SGLANG_SECTION, log, backends });
+  ) => makeChannelHandler({ section: () => SGLANG_SECTION, log, backends });
   const call = (handler: ReturnType<typeof makeHandler>) =>
     handler("discoverMetadata", { provider: "sglang" }, new AbortController().signal) as Promise<WireResult>;
 
@@ -516,7 +510,7 @@ describe("discoverMetadata channel handler — the SGLang branch (pinned backend
       return json(SERVER_INFO);
     });
     vi.stubGlobal("fetch", fetchImpl);
-    const handler = makeChannelHandler(fakeCtx(), {
+    const handler = makeChannelHandler({
       section: () => section,
       log: () => undefined,
       backends: [sglangBackend],

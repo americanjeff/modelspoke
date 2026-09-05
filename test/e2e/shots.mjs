@@ -123,6 +123,8 @@ async function openModelspoke(browser, url) {
     await openSidebar.first().click();
     await page.waitForTimeout(800);
   }
+  // Settings → Plugins → Plugin configuration (the first tab) → the
+  // modelspoke card — the disclosure starts collapsed; expand it.
   await page.evaluate(() => {
     const els = [...document.querySelectorAll('button, a, [role="tab"]')];
     els.find((l) => (l.textContent || "").trim().toLowerCase() === "settings")?.click();
@@ -130,8 +132,22 @@ async function openModelspoke(browser, url) {
   await page.waitForTimeout(1500);
   await page.evaluate(() => {
     const els = [...document.querySelectorAll('button, a, [role="tab"]')];
-    els.find((l) => (l.textContent || "").trim().toLowerCase() === "modelspoke")?.click();
+    els.find((l) => (l.textContent || "").trim().toLowerCase() === "plugins")?.click();
   });
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => {
+    const els = [...document.querySelectorAll('button, a, [role="tab"]')];
+    els.find((l) => (l.textContent || "").trim().toLowerCase() === "plugin configuration")?.click();
+  });
+  await page.waitForTimeout(500);
+  const card = page.locator('button[aria-expanded]', { hasText: "Modelspoke" });
+  await until(async () => {
+    const count = await card.count();
+    if (count === 0) return false;
+    if ((await card.first().getAttribute("aria-expanded")) === "true") return true;
+    await card.first().click().catch(() => undefined);
+    return false;
+  }, { timeout: 20000, what: "the modelspoke card expanded" });
   await until(
     () => page.evaluate(() => document.body.innerText.includes("No providers yet")),
     { timeout: 20000, what: "modelspoke section (empty state)" },
@@ -146,13 +162,13 @@ function ui(page) {
     inputName: page.getByLabel("Provider name"),
     inputBaseUrl: page.getByLabel("Base URL"),
     next: page.getByRole("button", { name: "Next", exact: true }),
+    // The row's li is the NEAREST li ancestor of its Edit button (the whole
+    // section sits inside the plugin card's li — a li:has() match would hit
+    // the card and read the first row's dot).
     row: (name) =>
-      page.locator("li", { has: page.getByRole("button", { name: `Edit provider ${name}` }) }),
+      page.getByRole("button", { name: `Edit provider ${name}` }).locator("xpath=ancestor::li[1]"),
     rowDotAria: async (name) => {
-      const row = page.locator("li", {
-        has: page.getByRole("button", { name: `Edit provider ${name}` }),
-      });
-      const dot = row.locator('span[role="img"]').first();
+      const dot = row(name).locator('span[role="img"]').first();
       return (await dot.getAttribute("aria-label")) ?? "";
     },
     // exact: the live catalog carries prefix-collision ids (…-dflash2, …-nothink)
@@ -213,8 +229,14 @@ async function main() {
       return /models · last checked/.test(aria);
     }, { timeout: 30000, what: "catalog fetch (green dot)" });
     await sleep(1500);
-    await row.locator("li").first().scrollIntoViewIfNeeded().catch(() => {});
-    await row.scrollIntoViewIfNeeded().catch(() => {});
+    // Frame the shot at the card's disclosure header (where the settings
+    // live) rather than the provider row — the editor below is tall, and a
+    // row-anchored scroll pushes the card header out of the pane.
+    await s.page.evaluate(() => {
+      const card = [...document.querySelectorAll("button[aria-expanded]")]
+        .find((b) => b.getAttribute("aria-expanded") === "true" && (b.textContent || "").includes("Modelspoke"));
+      card?.scrollIntoView({ block: "start" });
+    });
     await sleep(500);
     const p1 = path.join(SCREENSHOT_DIR, "modelspoke-01-section.png");
     await s.page.screenshot({ path: p1 });

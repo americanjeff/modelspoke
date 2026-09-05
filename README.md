@@ -1,13 +1,14 @@
 [![npm version](https://img.shields.io/npm/v/modelspoke)](https://www.npmjs.com/package/modelspoke)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-![modelspoke logo (dark mode)](assets/logo/bubble-wheel-hollow-3-white-88.png) ![modelspoke logo](assets/logo/bubble-wheel-hollow-3-88.png)
-
-# modelspoke
+# ![modelspoke icon](assets/logo/modelspoke-icon.png) modelspoke
 
 English | [中文](README.zh.md)
 
-A plugin for DeepSeek Harness for managing connections to local, OpenAI-compatible model servers
+A plugin for DeepSeek Harness for managing connections to local, OpenAI-compatible model servers.
+It is an improved replacement for the stock dsh custom provider setup: it discovers your servers and
+models instead of requiring hand-written provider blocks and per-model fields, and provides the
+capabilities the stock setup lacks.
 
 ## Features
 
@@ -33,53 +34,36 @@ Models with multimodal capabilities are great but if you add them via the dsh cu
 
 ## Installation & setup
 
-### dsh
+Prerequisite: a recent dsh with the `dsh plugin` command.
 
-modelspoke is a **dual-face Cordis package**: the node half registers the
-LLM adapter + the `modelspoke:` settings section; the client half (same
-package) renders the **Modelspoke** settings section and a first-run
-onboarding step in dsh's web UI. One plugin row mounts both halves.
+1. **Install:** dsh installs plugins with a tool called pnpm. If you don't
+   have it yet, install it first:
 
-1. **Bundle it into your dsh profile.** Add the package as a dependency in
-   the profile's `package.json` (pnpm `link:` to a checkout for local dev),
-   plus a `dsh.profile.bundles` entry, then `pnpm install` in the profile
-   directory:
-
-   ```json
-   {
-     "dependencies": {
-       "modelspoke": "^0.1.0"
-     },
-     "dsh": {
-       "profile": {
-         "bundles": ["@deepseek-ai/dsh-base", "modelspoke"]
-       }
-     }
-   }
+   ```console
+   npm install --global pnpm
    ```
 
-   The package carries no config row of its own — `dsh.cordis.yml` holds
-   only the single plugin row `name: 'modelspoke'`, which boots dormant
-   (zero routes) until a `modelspoke:` section exists.
+   Then one command for each profile where you will use local models:
 
-2. **Restart dsh once** after (de)install (dsh caches package metadata for
-   the process life). After that, content changes in a dev checkout are
-   HMR-only — no restart needed.
+   ```console
+   dsh plugin --profile web add modelspoke
+   dsh plugin --profile headless add modelspoke
+   ```
 
-3. **Open the Modelspoke settings page.** In the dsh web UI, the gear at the
-   bottom of the left rail opens Settings; select **modelspoke** in the
-   sidebar, then **+ Add provider**:
+2. **Restart dsh if it is running**, so it picks up the plugin.
 
-   ![Settings → modelspoke — the provider row and the provider card](docs/screenshots/modelspoke-01-section.png)
+3. **Open the Modelspoke settings card.** In the dsh web UI, the gear at
+   the bottom of the left rail opens Settings; select **Plugins** in the
+   sidebar, expand the **Modelspoke** card in the Plugin configuration tab,
+   then **+ Add provider**:
 
-4. **Point it at your server.** Set the provider's fields — name, base URL,
-   the *environment variable name* holding the API key (omit for keyless
-   local servers — no auth header is sent in that case), and an optional
-   default effort (`minimal` … `max`; a default the model doesn't offer
-   degrades to the nearest offered level; a per-request effort it doesn't
-   offer is refused, never silently clamped) — then commit with the card's
-   **Apply** button. The row's status dot goes green once the model
-   fetch succeeds.
+   ![Settings → Plugins → Modelspoke card — the provider row and the provider card](docs/screenshots/modelspoke-01-section.png)
+
+4. **Point it at your server.** Set the provider's name, its base URL, the
+   *environment variable name* holding the API key (omit for keyless local
+   servers — no auth header is sent in that case), and an optional default
+   effort (`minimal` … `max`) — then commit with the card's **Apply**
+   button. The row's status dot goes green once the model fetch succeeds.
 
 5. **Configure per model where you want to.** Expanding a provider fetches
    its model list; each model row has a chevron that opens an editable

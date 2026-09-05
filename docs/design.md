@@ -549,46 +549,31 @@ modelspoke:
   any `reasoningEffort` on it clamps to `off` (pi parity — nothing is sent;
   the effort has no model to materialize on).
 
-**First-use import.** A hand-written `llm-pi-ai` `llama-swap` block (like any
-other custom provider) is imported through the single path below — the deep
-config-import path is retired:
+**First-use import — RETIRED.** Both import paths are gone from the tree.
+The v1 onboarding step (an existing dsh **custom provider** → a modelspoke
+route, offered when modelspoke has zero routes AND there is ≥1 local
+`llm-pi-ai.providers.*` entry, over a loopback `provision` endpoint) was
+removed for being too narrow a trigger to be worth keeping: it was a
+one-time migration population that almost no one hits, and a fresh install
+(no pre-existing provider) got a silent no-op — the plugin had no proactive
+first-run UI for the population that needs it most. The deep config-import
+path (the hand-written `llm-pi-ai` `llama-swap` block +
+`config/llama-swap.yaml` → a route + FULL canonical override entries seeded
+into the route's `overrides` map) was retired before that: llama-swap
+renders the yaml metadata into `meta.llamaswap` for every model regardless
+of load state, so the seeded values ≡ the live DISCOVERY-tier values
+(oracle-asserted) — the seed was redundant with what discovery already
+provides through the same route, and the dependency-free yaml parser was
+pure maintenance.
 
-- **v1 (the onboarding step)** — an existing dsh **custom provider** → a
-  modelspoke route. Offered when modelspoke has zero routes AND there is ≥1
-  `llm-pi-ai.providers.*` entry with a LOCAL (loopback) baseURL — any name
-  (the literal-`llama-swap` keying was a historical artifact of an early
-  migration, not a product anchor). Default route name
-  `modelspoke-<source>` (shadowing is opt-in, not the default); editable — a
-  hand-written llama-swap block migrates with id continuity when the route is
-  renamed onto the block's own key. A
-  chosen name colliding with the full registrable set (all `llm-pi-ai`
-  provider keys ∪ existing modelspoke route names ∪ the built-in pi-ai
-  catalog ids — computed server-side) shows a non-blocking inline warning:
-  the existing provider stays active and SHADOWS the route until removed
-  (the batch registration is all-or-nothing). Key handling (the credential-
-  ref impedance): env-sourced entry key → mapped to `apiKeyEnv`; value-stored
-  (`.credentials.yaml`) → the route imports WITHOUT `apiKeyEnv` + an explicit
-  UI note — the value is NEVER copied (modelspoke reads `process.env` only; a
-  copied value is the green-dot-but-401 state). Server-side
-  `provision` endpoint: explicit `{name, baseURL, apiKeyEnv?}`, idempotent
-  (same name + same normalized baseURL = no-op; different baseURL = hard
-  error), existing overrides never overwritten. Post-import: a cleanup pointer
-  ("you can remove the source provider whenever — Settings → Models"); no
-  server-side removal endpoint in v1 (cross-namespace WRITE is unverified).
-- **Deep config-import path — RETIRED** — the hand-written
-  `llm-pi-ai` `llama-swap` block + `config/llama-swap.yaml` (read from
-  `$LLAMA_SWAP_CONFIG`, default `~/.pi/agent/llama-swap.yaml`) used to yield a
-  route + FULL canonical override entries seeded into the route's own
-  `overrides` map. llama-swap renders the yaml metadata into `meta.llamaswap`
-  for every model regardless of load state, so the seeded values ≡ the live
-  DISCOVERY-tier values (oracle-asserted) — the seed was redundant with what
-  discovery already provides through the same route, and the dependency-free
-  yaml parser was pure maintenance. The path is removed from the tree (no
-  parser, no `firstUseImport` endpoint); a hand-written block now imports
-  through the v1 path above, and per-model metadata resolves from discovery.
-
-Both persist through the settings seam's revision-fenced whole-section
-`replace` (`SETTINGS_CONFLICT` → the wire's `settings-conflict` code).
+Migrating a hand-written block is now a manual two-step: add a modelspoke
+route (**+ Add provider** in the UI, or a `routes:` entry in
+`settings.yaml`) with the name and base URL you want — naming the route
+onto the block's own key keeps id continuity; while the block remains, it
+SHADOWS a same-named route until removed (the batch registration is
+all-or-nothing) — then delete the block (Settings → Models). The API key
+VALUE is never copied (modelspoke reads `process.env` only); for an
+env-sourced block the route's `apiKeyEnv` carries the same env-var name.
 
 ### The client UI (dual-face plugin)
 
@@ -601,10 +586,13 @@ section, reachable through the open settings slots any loaded client plugin
 can register into (the web app has no URL router — slots ARE the entry
 surface):
 
-- **`settings.section`** (id `modelspoke`, nav label "modelspoke") — the
-  editor's home.
-- **`settings.onboarding`** — the first-run step: import an existing local
-  custom provider / the legacy llama-swap block, or Add-route manually.
+- **`settings.plugin.item`** (key `modelspoke`) — the editor's home: an
+  expandable card in the Plugins settings page's Plugin configuration tab
+  (the tab dispatches the slot per served namespace — the out-of-repo
+  extension point). The card draws its own disclosure header (the in-box
+  card chrome is CSS-module-bound and cannot be imported as values — the
+  bundle-purity gate) and keeps the section body MOUNTED while collapsed, so
+  in-flight provider drafts and open model details survive a collapse.
 - Wiring: route/override writes via `settings.mutate` + `settingsScope`
   (whole-array / whole-field sets with `expectedRevision` fencing and
   post-settlement read-back verification); live updates via the scope's
@@ -614,9 +602,8 @@ surface):
   RPC channel** (`ctx.connection.rpc.handle`, `{authority: "loopback"}` —
   the host's generic, bundle-open channel registry; the connection is read
   LAZILY — web profiles only, never a static inject — so the channel is a
-  silent no-op in tui/headless): `onboarding` (readiness + the v1 offer set +
-  the collision-name set), `provision` (the v1 import), `discoverMetadata`
-   (per-route discovered catalog facts).
+  silent no-op in tui/headless): `discoverMetadata` (per-route discovered
+  catalog facts).
 
 The section (the settings>Models mimic, and the settings iteration). The look is
 copied from dsh's own Settings → Models screen (markup/CSS reference:
@@ -657,8 +644,9 @@ tokens, which resolve at runtime inside the same settings dialog.
   non-empty: one row per entry with either **Delete** (orphaned — no route
   claims it) or a shadowed-by hint (claimed — deleting would change every
   other provider that inherits it; the provider card owns that judgment).
-- **i18n** — the entire section + onboarding in en/zh (`src/dsh/locales.ts`,
-  147 typed keys; locale resolution mirrors the host: dsh's durable
+- **i18n** — the entire section + the Plugins-page card in en/zh
+  (`src/dsh/locales.ts`, 104 typed keys; locale resolution mirrors the host:
+  dsh's durable
   `locale.preference` → browser, live via subscribe, fail-open to browser-
   only on a bind failure). The catalog `description` strings are localized
   too. Docs pair: `README.zh.md` + `docs/llama-swap-setup.zh.md` (human zh
@@ -839,8 +827,8 @@ shows demand (v1.0 candidate).
 | Tier-2 discovery | A backend registry — SGLang, Ollama, LM Studio, vLLM, llama.cpp — under the C1–C12 contract: definitive detection (memoized; inconclusive = retry), fail-soft per field/model, NEVER invent (no `thinkingLevelMap` except LM Studio's 1:1 `allowed_options`; no `compat` except llama.cpp's exact `supports_reasoning_effort` boolean; no `maxTokens` from anywhere), router-collision guards so llama-swap never matches a backend. |
 | `metadataSource` surfacing | Resolve-time log line (per-field) + model `description` suffix + the UI's per-field tier labels. (The dsh distro has no node-side plugin log sink — tracked upstream.) |
 | Presets | Per-template, conservative, overridable, attributed. Four entries (3.8 / 3.6 / 3.5 / gpt-oss); Qwen3-Coder-Next = NO preset (the default tier is correct for it). Provenance-pinned (hub AND GGUF copies) + `drift-check` / `preset-draft` tooling; the tool drafts, a human commits. |
-| First-use import | v1 = an existing dsh custom provider → a route (any name, local-only, `modelspoke-<source>` default, shadowing warned non-blocking, key refs never copied — env maps to `apiKeyEnv`, stored values never leave dsh). The deep config-import path (block + llama-swap.yaml seed) is retired — its seeded values were identical to the live discovery values. Cross-host (pi) import deferred (pi build parked — see the pi adapter row). |
-| Client UI | A dual-face Cordis plugin — standalone, zero dsh changes. `settings.section` + `settings.onboarding` entry points; the `/modelspoke` loopback RPC channel for cross-namespace reads + the import endpoints (connection read lazily — a silent no-op without a web profile). |
+| First-use import | RETIRED (both paths): the v1 onboarding step's trigger was too narrow to be worth keeping (a fresh install got a silent no-op), and the deep config-import path's seeded values were identical to the live discovery values. Migration is manual — add the modelspoke route, then delete the source block (shadowing until then, all-or-nothing registration). Cross-host (pi) import deferred (pi build parked — see the pi adapter row). |
+| Client UI | A dual-face Cordis plugin — standalone, zero dsh changes. `settings.plugin.item` entry point (the expandable card on the Plugins settings page, keyed on the `modelspoke` namespace); the `/modelspoke` loopback RPC channel for the discovered-catalog metadata (connection read lazily — a silent no-op without a web profile). |
 | Package faces | `.` = the dsh plugin entry (Option A repackage); `./client` = the web bundle; `./lib` = the framework-neutral core (stability boundary, pre-1.0). The host deps are optional peers. |
 | pi adapter | **Parked (owner decision, 2026-09-01): removed from the 0.1.0 package.** Code-complete, and the `pi -e` activation check passed before removal (pi 0.84.2, live llama-swap — 15 models listed). Revive on an explicit build decision. |
 | Matching | Catalog-ordered first match, most-specific first, unanchored case-insensitive regex. |
@@ -942,20 +930,7 @@ discipline (catalog-first, at most ONE fetch) is kept; this only avoids a
 fetch the catalog proves futile, and it is what keeps the pre-existing
 channel fetch-count contract green without touching test/channel.test.ts (C3).
 
-### src/dsh/channel.ts — keySource classification and the backend scan
-
-`keySource` (on `onboarding` offer candidates) exists for the R5
-credential-ref impedance: modelspoke can never read the VALUE of a key — at
-most it can classify the family an entry's key belongs to. An entry naming
-an `apiKeyEnv` whose value resolves from the inherited process environment
-is `{ kind: "env", envVar }` (and so is an `apiKeyEnv` that does not resolve
-when no credentials service is mounted — the optimistic read, deliberate:
-the import only needs the family, the UI degrades from there); `{ kind:
-"stored" }` is a key sitting in a layer modelspoke cannot read (the
-`$DSH_HOME/.credentials.yaml` file store or a `.env` fallback, resolved
-through the host `ctx.credentials` service — the Models page's typed-key
-path) or a literal `apiKey` value field; `{ kind: "none" }` names no key at
-all.
+### src/dsh/channel.ts — the backend scan
 
 The discovery-backend registry scan (`discoverMetadata`): the route is
 probed against src/discovery/backends.ts (SGLang, Ollama, LM Studio,
@@ -1001,16 +976,15 @@ end: llama-swap.yaml → /v1/models meta → discovery tier → resolve → wire
 The fake (llama-swap + fake-model-server) is NOT under test — llama-swap
 (the router) and modelspoke (discovery + resolve + wire) are.
 
-Journeys: J1 fresh install → first provider; J2 onboarding import from a
-local custom provider (env key — the value is never copied); J3 provider
-import of the hand-written llama-swap block (renamed onto the block's key;
-shadowing → all-or-nothing registration refusal); J4 provider card curation
-(detail edit, cancel, row removal, apply); J5 per-effort wire shape
-(off/low/medium/xhigh → `chat_template_kwargs`, headless turns); J10
-zero-route boot hint + dead port (error surface, no settings write); J11
-live-provider discovery against real local servers (catalog only, zero
-inference — each candidate is probed first and SKIPPED when unreachable, so
-the suite stays green without them).
+Journeys (ids are stable — J2/J3 were the onboarding-import journeys,
+retired with the import step and never renumbered): J1 fresh install →
+first provider; J4 provider card curation (detail edit, cancel, row
+removal, apply); J5 per-effort wire shape (off/low/medium/xhigh →
+`chat_template_kwargs`, headless turns); J10 zero-route boot hint + dead
+port (error surface, no settings write); J11 live-provider discovery
+against real local servers (catalog only, zero inference — each candidate
+is probed first and SKIPPED when unreachable, so the suite stays green
+without them).
 
 Manual / real-model journeys NOT covered: J6 (vision), J7 (real servers),
 J8 (pi), J9 (i18n), the J5 nothink row, the J10 thread-killer and the

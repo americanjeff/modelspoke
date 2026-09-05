@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { Context } from "@deepseek-ai/cordis";
 import { makeChannelHandler } from "../src/dsh/channel.js";
 import {
   discoveryBackends,
@@ -327,11 +326,6 @@ const LMSTUDIO_SECTION = {
   overrides: {},
 };
 
-/** A minimal fake Context (the channel handler only ctx.get()s services). */
-function fakeCtx(): Context {
-  return { get: () => undefined, on: () => () => undefined } as unknown as Context;
-}
-
 /** ORDER MATTERS: the v1 probe URL (`/api/v1/models`) also ends with `/models` — the v1 check must come first. */
 function stubLmStudioFetch(config: {
   v1Models?: () => Response;
@@ -363,7 +357,7 @@ describe("discoverMetadata channel handler — the LM Studio branch", () => {
   // C3: the backends list is PINNED to this backend alone — the fetch-count
   // assertions here stay stable as the registry grows.
   const makeHandler = (log: (line: string) => void = () => undefined) =>
-    makeChannelHandler(fakeCtx(), {
+    makeChannelHandler({
       section: () => LMSTUDIO_SECTION,
       log,
       backends: [lmstudioBackend],

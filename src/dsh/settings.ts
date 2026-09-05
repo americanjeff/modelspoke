@@ -81,9 +81,13 @@ const chatTemplateKwarg = z.union([
  * OpenAICompletionsCompat,
  * all fields optional. The 0.84-only fields are deliberately NOT accepted —
  * `supportsThinkingTokenBudget`, `chatTemplateArgs`, `supportsFinishReason`
- * (present in pi-ai 0.84.2, this package's dev/test dependency, absent from
- * 0.82.1 which dsh bundles): modelspoke targets the pi-ai 0.82 field subset
- * (version-skew rule) and never sets a field a bundled 0.82.1 would not know.
+ * (present in pi-ai 0.84.2, absent from 0.82.1): modelspoke targets the
+ * pi-ai 0.82 field subset (version-skew rule) and never sets a field a host
+ * dsh may not ship. pi-ai is a PEER dependency (>=0.82.1 <0.85, the tested
+ * span — 0.82.1 as dev/test dependency, 0.84.2 previously validated): under
+ * dsh it resolves to the host's bundled copy (the profiles/node_modules
+ * fallback anchor), so a registry install pulls nothing and the runtime
+ * version is whatever the user's dsh release ships.
  */
 /**
  * The canonical fields every entry shape carries (all optional — a
@@ -176,15 +180,14 @@ export const ModelspokeConfigSchema: Schemastery<any, any> = z.object({
   routes: z.array(route).default([]),
   overrides: z.dict(overrideEntry).default({}),
   // Client-side presentation flag — does the web GUI render the
-  // read_image tool's image, or fall back to the host's generic row? The node
-  // half never reads it (it gates a client registration, not a server
-  // behavior), but the schema must NAME it so (a) the write gate accepts a
-  // section carrying it and (b) the whole-section `replace` writes below do
-  // not silently strip it (see {@link renderReadImagesOf}). Optional: an
-  // absent key is the lenient "absent" state the reader maps to the default
-  // (render on). No `.default()` — a materialized default would pollute
-  // settings.yaml on every whole-section write with a field the user never
-  // wrote (the stripPhantomDefaults bug class).
+  // read_image tool's image, or fall back to the host's generic row? The
+  // node half's only reader is the read-image tool view's registration
+  // gate (src/dsh/toolview.ts). The schema must NAME it so the write gate
+  // accepts a section carrying it. Optional: an absent key is the lenient
+  // "absent" state the gate maps to the default (render on). No
+  // `.default()` — a materialized default would pollute settings.yaml on
+  // every section write with a field the user never wrote (the
+  // stripPhantomDefaults bug class).
   renderReadImages: z.boolean(),
 });
 
@@ -318,18 +321,4 @@ export function defaultEffortForRoute(
   const merged = effectiveOverrideEntry(section, routeName, modelId);
   const raw = merged === undefined ? undefined : merged.defaultEffort;
   return typeof raw === "string" && raw.length > 0 ? raw : undefined;
-}
-
-/**
- * The raw `renderReadImages` boolean as stored, or undefined when absent or
- * malformed (the lenient reader's contract: never throws, never coerces).
- * This is the mirror-carry helper: the whole-section `replace` writer
- * (provision) passes the value through byte-for-byte, so a
- * section carrying `renderReadImages: false` survives an unrelated import
- * (see the callers in src/dsh/channel.ts). The node half interprets it for
- * nothing — it is a client-side presentation flag.
- */
-export function renderReadImagesOf(section: unknown): boolean | undefined {
-  const raw = isPlainObject(section) ? section.renderReadImages : undefined;
-  return typeof raw === "boolean" ? raw : undefined;
 }

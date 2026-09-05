@@ -207,8 +207,8 @@ function apply(ctx: Context, config: unknown): void {
     );
   }
 
-  // The loopback RPC channel (onboarding readiness + first-use import) —
-  // a silent no-op in profiles without a Connection service (tui/headless).
+  // The loopback RPC channel (the discovered-catalog metadata) — a silent
+  // no-op in profiles without a Connection service (tui/headless).
   installModelspokeChannel(ctx, { section, log: (line) => logger.info(line) });
 }
 

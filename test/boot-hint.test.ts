@@ -73,12 +73,12 @@ describe("firstBootHint", () => {
     expect(hint).not.toContain("\n");
   });
 
-  it("points at all three fix locations (settings.yaml section, web settings page, onboarding import)", () => {
+  it("points at both fix locations (settings.yaml section, the Plugins-page card)", () => {
     const hint = firstBootHint(undefined) as string;
     expect(hint).toContain("`modelspoke:` section");
     expect(hint).toContain("settings.yaml");
-    expect(hint).toContain("Modelspoke settings page");
-    expect(hint).toContain('"Use your local models"');
+    expect(hint).toContain("Modelspoke");
+    expect(hint).toContain("Plugins settings");
   });
 
   it("speaks providers, not routes (the yaml key stays routes:)", () => {

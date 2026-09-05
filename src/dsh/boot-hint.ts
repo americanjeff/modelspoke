@@ -8,8 +8,8 @@
  * dsh node half (src/dsh/index.ts) logs EXACTLY ONE info line per boot
  * when the INITIAL section carries no routes: the plugin is active, it has
  * no routes yet, and where to fix it (the `modelspoke:` section of
- * settings.yaml, the Modelspoke settings page in the web UI, or the
- * first-run import step).
+ * settings.yaml, or the Modelspoke settings card in the web UI's Plugins
+ * page).
  *
  * The decision is a pure function of the initial section ({@link
  * firstBootHint}). It is settled ONCE per boot, on the first settings
@@ -39,7 +39,7 @@ export function firstBootHint(section: unknown): string | null {
   if (routesOf(section).length > 0) return null;
   return (
     "modelspoke: active with 0 providers — add one under the `modelspoke:` section of " +
-    "settings.yaml (a provider is one entry under `routes:`), in the Modelspoke " +
-    'settings page (dsh web UI), or via the first-run "Use your local models" import step'
+    "settings.yaml (a provider is one entry under `routes:`), or in the Modelspoke " +
+    "card of the dsh web UI's Plugins settings (Settings → Plugins → modelspoke card)"
   );
 }

@@ -165,11 +165,10 @@ describe("en identity: t('en', …) is the EXACT original client.tsx string", ()
       { keys: "mystery, compat" },
       "deep template fields present (mystery, compat) — edit in settings.yaml",
     ],
-    ["obFoundProviders", { count: 2 }, "Found 2 custom providers — pick one to import as a modelspoke provider."],
     [
-      "obDoneProviderHint",
+      "pluginCardDescription",
       undefined,
-      "You can remove the old provider whenever — Settings → Models.",
+      "Local OpenAI-compatible model servers — providers, models, and per-model configuration.",
     ],
   ];
 

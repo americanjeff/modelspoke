@@ -176,7 +176,7 @@ edit. Untouched providers round-trip byte-for-byte.
 - **(Un)installing the package** — dsh caches package metadata for the
   process life, so one restart after adding or removing modelspoke from your
   profile. Nothing else needs a restart.
-- **tui/headless profiles** — the settings page and onboarding step are web
-  surfaces; in tui/headless the plugin serves models exactly the same way and
+- **tui/headless profiles** — the Plugins-page settings card is a web
+  surface; in tui/headless the plugin serves models exactly the same way and
   the `settings.yaml` section (plus a first-boot log hint while no provider
   exists) is the interface.

@@ -7,7 +7,9 @@
 
 [English](README.md) | 中文
 
-一个 DeepSeek Harness 插件，管理到本地 OpenAI 兼容模型服务器的连接
+一个 DeepSeek Harness 插件，管理到本地 OpenAI 兼容模型服务器的连接。
+它是 dsh 内置自定义 provider 配置的改进型替代：自动发现服务器和模型，
+无需手写的 provider 块与逐模型字段，并提供内置机制缺失的能力。
 
 ## 功能
 
@@ -41,47 +43,35 @@ dsh 的自定义提供方功能没有任何设置推理强度的途径。Modelsp
 
 ## 安装与设置
 
-### dsh
+前提：带有 `dsh plugin` 命令的较新 dsh。
 
-modelspoke 是一个**双面 Cordis 包**：node 半注册 LLM 适配器 +
-`modelspoke:` 设置节；客户端半（同一个包）在 dsh 的 web UI 中渲染
-**modelspoke** 设置节和首次运行的引导步骤。一行插件条目挂载两半。
+1. **安装：** dsh 使用一个叫 pnpm 的工具来安装插件。如果你还没有安装它，
+   先安装：
 
-1. **把它打进你的 dsh profile。** 在 profile 的 `package.json` 中把该包
-   加为依赖（本地开发时用 pnpm `link:` 到一个 checkout），外加一条
-   `dsh.profile.bundles` 条目，然后在 profile 目录里 `pnpm install`：
-
-   ```json
-   {
-     "dependencies": {
-       "modelspoke": "^0.1.0"
-     },
-     "dsh": {
-       "profile": {
-         "bundles": ["@deepseek-ai/dsh-base", "modelspoke"]
-       }
-     }
-   }
+   ```console
+   npm install --global pnpm
    ```
 
-   这个包自身不携带配置行 — `dsh.cordis.yml` 只有一行插件条目
-   `name: 'modelspoke'`，在 `modelspoke:` 节存在之前以休眠状态启动
-   （零路由）。
+   然后在你要使用本地模型的每个 profile 中运行一条命令：
 
-2. **（反）安装后重启一次 dsh**（dsh 按进程生命周期缓存包元数据）。
-   之后，开发 checkout 中的内容变更只需 HMR — 无需重启。
+   ```console
+   dsh plugin --profile web add modelspoke
+   dsh plugin --profile headless add modelspoke
+   ```
 
-3. **打开 modelspoke 设置页。** 在 dsh web UI 中，左侧栏底部的齿轮
-   打开设置；在侧边栏选择 **modelspoke**，然后 **+ Add provider**：
+2. **如果 dsh 正在运行，重启它**，让它加载新插件。
 
-   ![Settings → modelspoke — 提供方行与提供方卡片](docs/screenshots/modelspoke-01-section.png)
+3. **打开 Modelspoke 设置卡片。** 在 dsh web UI 中，左侧栏底部的齿轮
+   打开设置；在侧边栏选择 **Plugins**，在 Plugin configuration 标签页
+   展开 **Modelspoke** 卡片，然后 **+ Add provider**：
 
-4. **把它指向你的服务器。** 设置提供方的字段 — 名称、基础 URL、
+   ![Settings → Plugins → Modelspoke 卡片 — 提供方行与提供方卡片](docs/screenshots/modelspoke-01-section.png)
+
+4. **把它指向你的服务器。** 设置提供方的名称、基础 URL、
    存放 API 密钥的*环境变量名*（无密钥的本地服务器可省略 —
-   此时不发送认证头）、以及可选的默认推理强度（`minimal` … `max` —
-   模型不接受的默认值会降级到最近的可用级别；请求时指定的强度若模型
-   不接受则会被拒绝，绝不静默钳制）— 然后用卡片的
-   **Apply** 按钮提交。模型拉取成功后，该行状态点变绿。
+   此时不发送认证头）、以及可选的默认推理强度（`minimal` … `max`）
+   — 然后用卡片的 **Apply** 按钮提交。模型拉取成功后，
+   该行状态点变绿。
 
 5. **在你想配置的地方做每模型配置。** 展开一个提供方会拉取它的模型
    列表；每个模型行有一个箭头，展开可编辑的详情（上下文窗口、最大

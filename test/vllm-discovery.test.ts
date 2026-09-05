@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { Context } from "@deepseek-ai/cordis";
 import { makeChannelHandler } from "../src/dsh/channel.js";
 import { toPositiveInt } from "../src/discovery/metadata.js";
 import type { OpenAIModelEntry } from "../src/discovery/types.js";
@@ -178,11 +177,6 @@ const VLLM_CHANNEL_CATALOG: OpenAIModelEntry[] = fixtureOf<OpenAIModelEntry[]>(
   "VLLM_CHANNEL_CATALOG",
 );
 
-/** A minimal fake Context (the channel handler only ctx.get()s services). */
-function fakeCtx(): Context {
-  return { get: () => undefined, on: () => () => undefined } as unknown as Context;
-}
-
 /** A stub fetch for /models only — the sole endpoint a vLLM channel run may hit (everything else 404s). */
 function stubVllmFetch(config: { models?: () => Response }) {
   return vi.fn(async (input: string | URL | Request) => {
@@ -211,7 +205,7 @@ describe("discoverMetadata channel handler — the vLLM branch", () => {
   // C3: the backends list is PINNED to the vLLM backend alone — the fetch
   // count assertions stay stable as the registry grows.
   const makeHandler = (log: (line: string) => void = () => undefined) =>
-    makeChannelHandler(fakeCtx(), {
+    makeChannelHandler({
       section: () => VLLM_SECTION,
       log,
       backends: [vllmBackend],

@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { Context } from "@deepseek-ai/cordis";
 import { makeChannelHandler } from "../src/dsh/channel.js";
 import {
   fetchLlamacppProps,
@@ -389,11 +388,6 @@ const LLAMACPP_SECTION = {
   overrides: {},
 };
 
-/** A minimal fake Context (the channel handler only ctx.get()s services). */
-function fakeCtx(): Context {
-  return { get: () => undefined, on: () => () => undefined } as unknown as Context;
-}
-
 function stubLlamacppFetch(config: {
   props?: () => Response;
   models?: () => Response;
@@ -422,7 +416,7 @@ describe("discoverMetadata channel handler — the llama.cpp branch", () => {
   });
 
   const makeHandler = (log: (line: string) => void = () => undefined) =>
-    makeChannelHandler(fakeCtx(), {
+    makeChannelHandler({
       section: () => LLAMACPP_SECTION,
       log,
       backends: [llamacppBackend], // PINNED (C3) — the registry order is the owner's

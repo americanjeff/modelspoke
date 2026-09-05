@@ -4,6 +4,21 @@ Coarse and consumer-facing — the kind of thing a dsh user or a `./lib`
 consumer can act on. Build-internal work (tests, comments, docs) does not
 belong here.
 
+## Unreleased
+
+- **The install is a single command with no pnpm build-script approval** —
+  modelspoke no longer pulls its own pi-ai copy into the profile; it uses the
+  one its dsh installation ships (tested span 0.82.1–0.84.x).
+- **The settings UI moved to the Plugins settings page** — the standalone
+  "modelspoke" settings section is replaced by an expandable **Modelspoke**
+  card in Settings → Plugins → Plugin configuration; expand the card, then
+  **+ Add provider**. (README setup step 3 updated.)
+- **The first-run "Use your local models" import step is gone** — its
+  trigger was too narrow to be worth keeping. To migrate a hand-written
+  `llm-pi-ai` block, add the modelspoke route manually (same name/base URL;
+  the block shadows a same-named route until you delete it), then delete the
+  block.
+
 ## 0.1.1 — 2026-09-04
 
 - **`./lib` core hardening** — `discoverModels` no longer crashes in a

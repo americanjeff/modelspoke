@@ -66,10 +66,7 @@ A dsh plugin is a Cordis plugin (`name` / `inject` / `Config` /
   `ctx.credentials.resolve(ref)` — resolution is per call and **must not be
   cached across operations**. A named reference that misses throws
   `LlmError MISSING_CREDENTIAL` (no fallback); a profile with no `apiKeyEnv`
-  defers to pi-ai's own ambient discovery. modelspoke's `keySource`
-  classification (env-reference vs keyless vs other, for onboarding
-  candidates) is modelspoke-side on top of this: `src/dsh/channel.ts`
-  (`keySourceOf`).
+  defers to pi-ai's own ambient discovery.
 - **Attribution is mandatory.** The `LlmAdapter` docstring requires that
   *every* provider HTTP request include the harness attribution headers.
   `attributionHeaders()` is a **free function exported by
@@ -264,9 +261,8 @@ For modelspoke the relevant ones:
 
 | Slot | Renders as | Notes |
 |---|---|---|
-| `settings.section` | A new row in the Settings nav opening a full page | The **recommended editor home**; the nav is auto-projected from the section ledger — zero shell edits. |
-| `settings.onboarding` | Ordered first-run modal steps | Owner gets `{ stepId, complete, openSection }`. |
-| `settings.plugin.item` | A card inside Settings → Plugins → Configurable, **keyed by settings namespace** | *Explicitly designed for plugins shipped outside the dsh repo*; the tab enumerates every namespace the host exposes in `settings.describe` and dispatches one card per namespace — a plugin that registers a namespace + a card under that key appears automatically. |
+| `settings.plugin.item` | A card inside Settings → Plugins → Configurable, **keyed by settings namespace** | **modelspoke's editor home** — *explicitly designed for plugins shipped outside the dsh repo*; the tab enumerates every namespace the host exposes in `settings.describe` and dispatches one card per namespace — a plugin that registers a namespace + a card under that key appears automatically. |
+| `settings.section` | A new row in the Settings nav opening a full page | The full-page section home (the in-box sections' choice); the nav is auto-projected from the section ledger — zero shell edits. modelspoke moved its surface into the plugin card above. |
 | `settings.plugins.tab`, `settings.general.item`, `settings.trigger/header/action/close`, `shell.overlay`, `sidebar.footer.action` | Tabs / rows / chrome / overlays | Open but less fitting; there is **no third-party top-level nav seat** — Settings is the supported home. |
 
 ### 2.3 The loopback RPC-channel bridge (client ↔ its own server code)
@@ -284,7 +280,7 @@ host (dsh process, server apply):
   )                                         // ⇒ HTTP route /modelspoke/<endpoint>,
                                             //   403 for off-loopback origins
 browser (client apply):
-  ctx.get('connection').rpc.call('/modelspoke', 'firstUseImport', {})
+  ctx.get('connection').rpc.call('/modelspoke', 'discoverMetadata', { provider: '…' })
 ```
 
 Properties that make this the right tool: **bundle-open by design** (any
@@ -292,16 +288,16 @@ plugin registers one absolute channel prefix + trust policy — cross-package
 use is the intended pattern); **trust-fenced for free** (`authority:
 'loopback'` applies the same fence as `/api`; `trusted-host` accepts the
 deployment's trusted hosts); **lifecycle-safe** (the registration is a fiber
-effect — the channel disappears with the composition). Endpoint segment
-grammar is `[A-Za-z0-9_$.-]` — **no hyphens** (`firstUseImport`, not
-`first-use-import`).
+effect — the channel disappears with the composition).
 
 Server-side availability gotcha: `connection` is a sibling service that
 exists **only in the web composition**. Never add it to the plugin's static
 `inject` (the plugin must still boot dormant in tui/headless profiles) — read
 `ctx.get('connection')` at apply time and additionally subscribe to the
 `internal/service` event (`{ global: true }`) so the channel registers
-whichever order the two fibers activate, guarded idempotently.
+whichever order the two fibers activate, guarded idempotently. The endpoint
+segment grammar is `[A-Za-z0-9_$.-]` — **no hyphens** (`discoverMetadata`,
+not `discover-metadata`).
 
 **The shared `/api` surface** (typed `ctx.connection.api`) is callable from
 any client bundle and covers the rest: `settings.describe/update/replace/mutate`
@@ -434,5 +430,5 @@ patches.
   nothing more. A plugin-owned per-row editor would require the roadmap's S2
   layout registry / S3 plugin-registered layouts. Until then, the supported
   pattern is what modelspoke ships: own the full surface as a
-  `settings.section` page (plus onboarding and a keyed plugin card) and
+  keyed plugin card on the Plugins page (`settings.plugin.item`) and
   read/write the namespace through the settings seam (§3).

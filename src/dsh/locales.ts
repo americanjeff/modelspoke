@@ -534,11 +534,6 @@ const STRINGS = {
     en: "Duplicate key \"{key}\" in the thinking level map — a row already uses it.",
     zh: "思考级别映射中存在重复 key \"{key}\" — 已有一行在使用。",
   },
-  errProviderNameSlash: {
-    en: "The provider name must not contain a slash (it is the provider key).",
-    zh: "提供方名称不能包含斜杠（它是提供方键）。",
-  },
-
   topOverridesHeading: {
     en: "Top-level overrides",
     zh: "顶层 overrides",
@@ -562,97 +557,15 @@ const STRINGS = {
     zh: "删除顶层 override \"{id}\"？没有任何提供方为它配置了自有条目，删除后该模型的配置重新从服务器发现 / 预设 / 默认值解析。",
   },
 
-  obTitle: {
-    en: "Use your local models",
-    zh: "使用你的本地模型",
+  /** The Plugins-page card's disclosure header (ModelspokeCard in
+   *  client.tsx) — name + description, the in-box card chrome pattern. */
+  pluginCardTitle: {
+    en: "Modelspoke",
+    zh: "Modelspoke",
   },
-  importing: {
-    en: "Importing…",
-    zh: "导入中…",
-  },
-  import: {
-    en: "Import",
-    zh: "导入",
-  },
-  setUpLater: {
-    en: "Set up later",
-    zh: "稍后设置",
-  },
-  obFoundProviders: {
-    en: "Found {count} custom providers — pick one to import as a modelspoke provider.",
-    zh: "发现 {count} 个自定义提供方 — 选择一个作为 modelspoke 提供方导入。",
-  },
-  select: {
-    en: "Select",
-    zh: "选择",
-  },
-  obFoundSingle: {
-    en: "Found a custom provider — import it as a modelspoke provider?",
-    zh: "发现一个自定义提供方 — 是否作为 modelspoke 提供方导入？",
-  },
-  obImportProviderStart: {
-    en: "Import provider",
-    zh: "导入提供方",
-  },
-  obImportProviderEnd: {
-    en: "as a modelspoke provider:",
-    zh: "作为 modelspoke 提供方：",
-  },
-  obKeyEnvStart: {
-    en: "Key: environment variable",
-    zh: "密钥：环境变量",
-  },
-  obKeyEnvMid: {
-    en: "(used as the provider's",
-    zh: "（用作提供方的",
-  },
-  obKeyEnvEnd: {
-    en: ")",
-    zh: "）",
-  },
-  obKeyStoredStart: {
-    en: "This provider's key is stored in dsh credentials — if the server needs auth, set",
-    zh: "该提供方的密钥存储在 dsh 凭据中 — 若服务器需要认证，请在提供方上设置",
-  },
-  obKeyStoredEnd: {
-    en: "to an environment variable on the provider.",
-    zh: "为一个环境变量。",
-  },
-  obCollisionStart: {
-    en: "An existing",
-    zh: "已存在的",
-  },
-  obCollisionEnd: {
-    en: "provider would keep serving and shadow this provider until it is removed.",
-    zh: "提供方将继续提供服务并遮蔽此提供方，直到其被删除。",
-  },
-  obDoneProviderStart: {
-    en: "Imported",
-    zh: "已导入",
-  },
-  obDoneProviderMid: {
-    en: "as provider",
-    zh: "作为提供方",
-  },
-  obDoneProviderEnd: {
-    en: ".",
-    zh: "。",
-  },
-  obDoneProviderHint: {
-    en: "You can remove the old provider whenever — Settings → Models.",
-    zh: "你随时可以移除旧提供方 — 设置 → 模型。",
-  },
-  openModelspoke: {
-    en: "Open Modelspoke",
-    zh: "打开 Modelspoke",
-  },
-  done: {
-    en: "Done",
-    zh: "完成",
-  },
-  importRequestFailed: {
-    en: "the import request failed",
-    zh: "导入请求失败",
+  pluginCardDescription: {
+    en: "Local OpenAI-compatible model servers — providers, models, and per-model configuration.",
+    zh: "本地 OpenAI 兼容模型服务器 — 提供方、模型与逐模型配置。",
   },
 } satisfies Record<string, LocalizedString>;
 

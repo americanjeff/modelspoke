@@ -7,10 +7,10 @@
  * node test environment). The client bundle (src/dsh/client.tsx) imports
  * these and tsdown inlines the module (the bundle's runtime requires stay
  * react + react/jsx-runtime); the unit tests (test/toolview.test.ts) import
- * the module directly. This mirrors the `./import.js` split: the client
- * file cannot be imported from a test (its top-level react import is not
- * installed in this repo's node_modules — the bundle's require is answered
- * by the web shell's module table at runtime, not by the repo).
+ * the module directly: the client file cannot be imported from a test (its
+ * top-level react import is not installed in this repo's node_modules — the
+ * bundle's require is answered by the web shell's module table at runtime,
+ * not by the repo).
  *
  * The gap these helpers address: `read_image` logs its result as
  * `[text envelope, image block]` where the image block is

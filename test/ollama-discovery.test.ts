@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { Context } from "@deepseek-ai/cordis";
 import { makeChannelHandler } from "../src/dsh/channel.js";
 import {
   isVersionGated as gateOf,
@@ -448,11 +447,6 @@ const SHOWS: Record<string, OllamaShowResponse> = {
   "glm-5.2:cloud": SHOW_GLM_CLOUD,
 };
 
-/** A minimal fake Context (the channel handler only ctx.get()s services). */
-function fakeCtx(): Context {
-  return { get: () => undefined, on: () => () => undefined } as unknown as Context;
-}
-
 function stubOllamaFetch(config: {
   version?: (url: string) => Response;
   show?: (model: string) => Response;
@@ -486,7 +480,7 @@ describe("discoverMetadata channel handler — the Ollama branch", () => {
   });
 
   const makeHandler = (log: (line: string) => void = () => undefined) =>
-    makeChannelHandler(fakeCtx(), { section: () => OLLAMA_SECTION, log });
+    makeChannelHandler({ section: () => OLLAMA_SECTION, log });
   const call = (handler: ReturnType<typeof makeHandler>) =>
     handler("discoverMetadata", { provider: "ollama" }, new AbortController().signal) as Promise<WireResult>;
 

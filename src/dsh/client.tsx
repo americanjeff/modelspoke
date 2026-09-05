@@ -1,7 +1,7 @@
 /**
  * modelspoke — dsh client plugin (browser half): the `modelspoke:` settings
- * section (provider rows with route CRUD + per-model configuration) and the
- * onboarding first-run step.
+ * section (provider rows with route CRUD + per-model configuration),
+ * rendered as the expandable Modelspoke card on the Plugins settings page.
  *
  * Dual-face counterpart of the node half (src/dsh/index.ts): the same Cordis
  * row contributes this browser bundle, which the web app's client scanner
@@ -89,20 +89,6 @@
  * fields (`thinkingFormat`, `chatTemplateKwargs`, …) alongside the
  * `supportsReasoningEffort` pin.
  *
- * The `settings.onboarding` first-run step: a loopback RPC to the node
- * half's `/modelspoke` channel (src/dsh/channel.ts) probes readiness
- * (`onboarding`) and, when the section is not ready, offers the
- * onboarding-v2 import — a LOCAL `llm-pi-ai` custom provider over
- * `provision` (pick list for several, direct form for one; the
- * `modelspoke-<source>` name default, the per-keySource key note, and the
- * live non-blocking collision warning — the server's `shadowing` response
- * field is the guaranteed backstop). The pure helpers live in
- * framework-neutral ./import.js (inlined by tsdown, unit-tested directly).
- * The step owns its modal chrome + `#root` inert while visible (slot
- * contract), renders null + completes itself whenever the channel says
- * nothing to offer, and adds NO runtime requires beyond react/jsx-runtime
- * (the call rides the injected `connection` service).
- *
  * Write settlement (verified against
  * packages/client/ui-settings/src/client/settings-scope.ts:110-158 of the
  * dsh checkout): `set` carries the latest known revision and, on rejection
@@ -122,7 +108,6 @@
  * (tsconfig.json "exclude" / tsconfig.client.json type-checks it).
  */
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { createPortal } from "react-dom";
 import type { CSSProperties, ReactNode } from "react";
 import type { ClientContext } from "@deepseek-ai/dsh-client-runtime/client";
 // The settled tool-call node types the read_image view renders over
@@ -148,8 +133,14 @@ import type {} from "@deepseek-ai/dsh-client-ui-settings/client";
 // the host's own connection plugin (injected below); the bundle keeps no
 // runtime reference to the module.
 import type { ConnectionHandle, DiscoveredModelView } from "@deepseek-ai/dsh-client-connection/client";
-// The pure onboarding-v2 helpers (name default + live collision check).
-import { defaultImportRouteName, providerCollision } from "./import.js";
+// Type-only: pulls the settings-plugins domain's SlotMap merge (the
+// 'settings.plugin.item' entry the Plugins page's configurable tab
+// declares at runtime) into this program — the same pattern as the
+// 'settings.section' merge above. The tab dispatches this slot once per
+// served settings namespace, so the card registers under the `modelspoke`
+// namespace key it edits (keying on the namespace is what lets an
+// out-of-repo plugin contribute a card — the tab's own extension point).
+import type {} from "@deepseek-ai/dsh-client-ui-settings-plugins/client";
 // The pure model-curation contract (the entry-list ops the card's
 // commit writes, the semantic dirty equality, and the status-dot detail
 // text).
@@ -692,50 +683,6 @@ const sameOverrides = (a: Record<string, unknown>, b: Record<string, unknown>): 
 
 
 /**
- * The onboarding step's modal chrome: a full-viewport overlay + a
- * centered card, plain elements like the rest of the page (no CSS
- * modules — the page is unthemed by design). The mask has no click
- * handler on purpose: an onboarding step blocks until ITS OWN buttons
- * resolve it (the shipped steps' posture — no escape-to-dismiss).
- */
-const stepStyle = {
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    zIndex: 1000,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  mask: { position: "absolute", inset: 0, backgroundColor: "rgba(0, 0, 0, 0.5)" },
-  card: {
-    position: "relative",
-    maxWidth: 480,
-    padding: 24,
-    background: "#fff",
-    color: "#222",
-    border: "1px solid #888",
-    borderRadius: 8,
-  },
-  title: { marginTop: 0, marginBottom: 8 },
-  actions: { display: "flex", gap: 8, marginTop: 16 },
-  secondary: { marginLeft: 0 },
-  error: { color: "#b00020" },
-  hint: { color: "#666", fontSize: "smaller" },
-  field: { display: "block", margin: "8px 0" },
-  row: { display: "flex", gap: 12, alignItems: "baseline", margin: "4px 0" },
-  // The collision warning: visible, deliberately NON-BLOCKING (the owner
-  // rule — taking over a name is a legitimate migrate-then-delete choice).
-  warning: {
-    color: "#5c4a00",
-    background: "#fff8e1",
-    border: "1px solid #c9a227",
-    padding: "8px 12px",
-    margin: "8px 0",
-  },
-} as const;
-
-/**
  * The settings → Models mimic: the section shell, the row card,
  * the capsule controls, and the filled editor card, with the reference
  * module CSS's geometry (dsh packages/client/ui-settings-models/src/client/
@@ -777,6 +724,60 @@ const ms = {
     fontSize: 14,
     lineHeight: "22px",
     color: "var(--dsw-alias-label-tertiary)",
+  },
+  /** The Plugins-page plugin card chrome (ModelspokeCard): the in-box
+   *  PluginCard.module.css geometry ported to inline styles (the reference
+   *  ships CSS modules the bundle-purity gate keeps out). The in-box
+   *  `:hover` / `:focus-visible` pseudo-states are dropped — inline styles
+   *  cannot express them (the `MsButton` port's same limitation). */
+  card: {
+    listStyle: "none",
+    border: "1px solid var(--dsw-alias-border-l2)",
+    background: "var(--dsw-alias-bg-layer-3)",
+    borderRadius: 12,
+  },
+  cardHeader: {
+    appearance: "none",
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    width: "100%",
+    padding: "14px 16px",
+    font: "inherit",
+    color: "inherit",
+    textAlign: "left",
+    cursor: "pointer",
+    background: "transparent",
+    border: 0,
+    borderRadius: 12,
+  },
+  cardHeadText: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    flex: 1,
+    minWidth: 0,
+  },
+  cardName: {
+    fontSize: 15,
+    fontWeight: 600,
+    lineHeight: "1.4",
+    color: "var(--dsw-alias-label-primary)",
+  },
+  cardDescription: {
+    fontSize: 13,
+    lineHeight: "1.5",
+    color: "var(--dsw-alias-label-tertiary)",
+  },
+  cardChevron: {
+    flex: "none",
+    color: "var(--dsw-alias-label-tertiary)",
+    transition: "transform 0.16s",
+  },
+  cardBody: {
+    borderTop: "1px solid var(--dsw-alias-border-l2)",
+    margin: "0 16px",
+    paddingBottom: 8,
   },
   rows: {
     listStyle: "none",
@@ -2124,7 +2125,7 @@ export function apply(ctx: ClientContext): void {
     localeScope !== null ? localeScope.getSnapshot() : EMPTY_LOCALE_SNAPSHOT;
 
   /**
-   * i18n — the LIVE locale for the section / onboarding: the bound
+   * i18n — the LIVE locale for the section / card: the bound
    * `locale.preference` (re-resolved on every snapshot change — a language
    * switch is a snapshot replacement that re-renders the section without a
    * reload), else the browser language (`navigator.language`), else (a failed
@@ -2430,8 +2431,8 @@ export function apply(ctx: ClientContext): void {
     /**
      * The qwen3.8 fix — the DISCOVERED-METADATA fetch, alongside the
      * catalog fetch on every card expand: a loopback RPC to the node
-     * half's /modelspoke channel (the same `connection.rpc.call` pattern
-     * the onboarding step uses):
+     * half's /modelspoke channel (the loopback RPC over the host's
+     * connection service):
      * `discoverMetadata { provider }` → `{ models: [{ id, name?,
      * discoveredCanonical? }] }` — the per-wire-id DISCOVERED canonical
      * fields (the discovery tier the dsh catalog view does not carry:
@@ -4019,425 +4020,57 @@ export function apply(ctx: ClientContext): void {
     );
   };
 
-  ctx.slots.inject("settings.section", () =>
-    ctx.slots.register({
-      name: "settings.section",
-      id: "modelspoke",
-      order: 20,
-      label: () => "modelspoke",
-    }, ModelspokeSection),
-  );
-
-  // The first-run step in the shell's ordered `settings.onboarding` chain
-  // (contract: ui-settings slots.ts 'settings.onboarding' — the shell mounts
-  // exactly one step at a time and hands the active registrant
-  // `{ stepId, complete, openSection }`). After the shipped steps
-  // (welcome-notice order -100, deepseek-official order 0) this step takes
-  // order 100. It probes the node half's `/modelspoke` channel
-  // (`onboarding`) and layers its offers, FIRST MATCH WINS:
-  //   1. `ready` (≥1 route) → complete silently (the section page is
-  //      already usable);
-  //   2. ≥1 local `llm-pi-ai` provider (the onboarding-v2 offer —
-  //      "don't make me retype the URL") → a pick list when several
-  //      candidates, a direct form for one: name (default
-  //      `modelspoke-<source provider name>`, editable) + baseURL
-  //      (prefilled, editable) + the key note, and a live NON-BLOCKING
-  //      collision warning while the name sits in the registrable set
-  //      (server backstop: `provision` reports `shadowing` in the
-  //      response);
-  //   3. nothing else → complete silently (the section's Add-route form
-  //      stays the manual path).
-  // Any other readiness — channel error, unreachable (off-loopback
-  // browser, non-web profile) — completes the step silently so the chain
-  // is never stranded. Success views hand off with
-  // `openSection("modelspoke")`. The step owns its modal chrome + `#root`
-  // inert while visible (slot contract) and adds NO runtime requires
-  // beyond react/jsx-runtime (the calls ride the injected `connection`
-  // service; the pure helpers come from ./import.js, inlined by tsdown).
-  type OfferedProvider = {
-    name: string;
-    baseURL: string;
-    keySource:
-      | { kind: "env"; envVar: string }
-      | { kind: "stored" }
-      | { kind: "none" };
-  };
-  type StepPhase =
-    | { kind: "checking" }
-    | {
-        kind: "offer-provider";
-        /** null = the pick list is showing (several candidates). */
-        source: OfferedProvider | null;
-        name: string;
-        baseURL: string;
-        importing: boolean;
-        error: string | null;
-      }
-    | { kind: "done-provider"; routeName: string; sourceName: string; shadowing: string | null };
-
-  /** The form's key note: per the candidate's `keySource` — env → the
-   *  name maps 1:1 to the route's `apiKeyEnv`; stored → the value sits in a
-   *  layer the route cannot read (modelspoke reads `process.env` only), so
-   *  the import omits `apiKeyEnv` and says so; none → no note. */
-  const KeyNote = ({ source, locale }: { source: OfferedProvider; locale: LocaleId }) => {
-    if (source.keySource.kind === "env") {
-      return (
-        <p style={stepStyle.hint}>
-          {t(locale, "obKeyEnvStart")}{" "}
-          <code>{source.keySource.envVar}</code>{" "}
-          {t(locale, "obKeyEnvMid")}{" "}
-          <code>apiKeyEnv</code>
-          {t(locale, "obKeyEnvEnd")}
-        </p>
-      );
-    }
-    if (source.keySource.kind === "stored") {
-      return (
-        <p style={stepStyle.hint}>
-          {t(locale, "obKeyStoredStart")}{" "}
-          <code>apiKeyEnv</code>{" "}
-          {t(locale, "obKeyStoredEnd")}
-        </p>
-      );
-    }
-    return null;
-  };
-
-  /** The collision warning: the same text in the live form (inline,
-   *  non-blocking) and the success view (the server-reported `shadowing`). */
-  const CollisionWarning = ({ colliding, locale }: { colliding: string; locale: LocaleId }) => (
-    <p style={stepStyle.warning} role="alert">
-      {t(locale, "obCollisionStart")}{" "}
-      <code>{colliding}</code>{" "}
-      {t(locale, "obCollisionEnd")}
-    </p>
-  );
-
-  const ModelspokeOnboardingStep = (owner: {
-    stepId: string;
-    complete: () => void;
-    openSection: (id: string) => void;
-  }) => {
-    const [step, setStep] = useState<StepPhase>({ kind: "checking" });
+  // The modelspoke card inside Settings → Plugins → Plugin configuration
+  // (the configurable tab's extension point — its own contract,
+  // @deepseek-ai/dsh-client-ui-settings-plugins: the tab dispatches
+  // `settings.plugin.item` once per SERVED settings namespace and pairs it
+  // with the card registered under that key — keying on the namespace is
+  // what lets an out-of-repo plugin contribute a card). The tab owns the
+  // card list; the bundle-purity gate forbids importing the in-box card
+  // chrome as values (it ships CSS modules this bundle cannot take), so
+  // this card draws its own disclosure header — name + description,
+  // chevron, `aria-expanded` — in the page's plain-element inline styles,
+  // the reference module CSS's geometry ported token-for-token like the
+  // `ms` section chrome (PluginCard.module.css, dsh 0.1.1-rc.2). The body
+  // (the section itself) stays MOUNTED while collapsed — hidden, not
+  // unmounted — so an in-flight provider draft, an open provider card, and
+  // an open model detail survive a collapse (the in-box cards keep their
+  // staged drafts the same way, through their form controllers).
+  const ModelspokeCard = () => {
+    const [open, setOpen] = useState(false);
     // i18n — the live locale (preference → browser; live via subscribe).
     const locale = useModelspokeLocale();
-    // The probe-time offer set: the candidates the pick list renders
-    // and the registrable names the live collision warning checks.
-    const [providerOffers, setProviderOffers] = useState<OfferedProvider[]>([]);
-    const [providerNames, setProviderNames] = useState<string[]>([]);
-    // The step completes itself EXACTLY once (the shell tracks completion by
-    // id; a double complete() is harmless but the guard keeps the intent).
-    const finished = useRef(false);
-    const finish = (): void => {
-      if (finished.current) return;
-      finished.current = true;
-      owner.complete();
-    };
-
-    // Readiness probe on mount: the channel answers with the node half's
-    // current facts (src/dsh/channel.ts `onboarding`) and the offers are
-    // layered per the module note above. A result the step does not render
-    // for completes the chain immediately (the DeepSeek step's
-    // `complete()`-on-unready precedent).
-    useEffect(() => {
-      let cancelled = false;
-      connection
-        .rpc.call("/modelspoke", "onboarding", {})
-        .then((result) => {
-          if (cancelled) return;
-          if (result.ok !== true) {
-            finish();
-            return;
-          }
-          const facts = result.value as
-            | {
-                ready?: boolean;
-                providers?: OfferedProvider[];
-                providerNames?: string[];
-              }
-            | undefined;
-          if (facts === undefined || facts.ready === true) {
-            finish();
-            return;
-          }
-          // Layer 3 — the custom-provider offer (the server already
-          // filtered to local candidates).
-          const providers = Array.isArray(facts.providers) ? facts.providers : [];
-          const names = Array.isArray(facts.providerNames) ? facts.providerNames : [];
-          if (providers.length === 0) {
-            finish();
-            return;
-          }
-          setProviderOffers(providers);
-          setProviderNames(names);
-          const single = providers.length === 1 ? providers[0] : undefined;
-          if (single !== undefined) {
-            setStep({
-              kind: "offer-provider",
-              source: single,
-              name: defaultImportRouteName(single.name),
-              baseURL: single.baseURL,
-              importing: false,
-              error: null,
-            });
-          } else {
-            setStep({
-              kind: "offer-provider",
-              source: null,
-              name: "",
-              baseURL: "",
-              importing: false,
-              error: null,
-            });
-          }
-        })
-        .catch(() => {
-          if (!cancelled) finish();
-        });
-      return () => {
-        cancelled = true;
-      };
-    }, []);
-
-    // The contract: the step owns its modal chrome AND `#root` inert — but
-    // only while VISIBLE. While the readiness probe is in flight (the
-    // "checking" phase) the step renders null and must block nothing, so
-    // the inert is gated on visibility, not on being the active step.
-    const visible = step.kind !== "checking";
-    useEffect(() => {
-      if (!visible) return;
-      const appRoot = document.getElementById("root");
-      if (appRoot === null) return;
-      const previous = appRoot.inert;
-      appRoot.inert = true;
-      return () => {
-        appRoot.inert = previous;
-      };
-    }, [visible]);
-
-    if (!visible) return null;
-
-    const pick = (source: OfferedProvider): void => {
-      setStep({
-        kind: "offer-provider",
-        source,
-        name: defaultImportRouteName(source.name),
-        baseURL: source.baseURL,
-        importing: false,
-        error: null,
-      });
-    };
-
-    const patchForm = (patch: { name?: string; baseURL?: string }): void => {
-      setStep((s) =>
-        s.kind === "offer-provider" && s.source !== null ? { ...s, ...patch, error: null } : s,
-      );
-    };
-
-    const runProvision = async (): Promise<void> => {
-      if (step.kind !== "offer-provider" || step.source === null) return;
-      const name = step.name.trim();
-      const baseURL = step.baseURL.trim();
-      const source = step.source;
-      if (name.length === 0) {
-        setStep({ ...step, error: t(locale, "errProviderNameRequired") });
-        return;
-      }
-      if (name.includes("/")) {
-        setStep({ ...step, error: t(locale, "errProviderNameSlash") });
-        return;
-      }
-      if (baseURL.length === 0) {
-        setStep({ ...step, error: t(locale, "errBaseUrlRequired") });
-        return;
-      }
-      setStep({ ...step, importing: true, error: null });
-      try {
-        // The key mapping: an env-sourced candidate carries its env-var
-        // name as the route's `apiKeyEnv`; stored/none candidates import
-        // WITHOUT it (the value is never copied — the note says how to set
-        // auth manually when the server needs it).
-        const payload: Record<string, string> = { name, baseURL };
-        if (source.keySource.kind === "env") payload.apiKeyEnv = source.keySource.envVar;
-        const result = await connection.rpc.call("/modelspoke", "provision", payload);
-        if (result.ok !== true) {
-          const message =
-            result.ok === false ? result.error.message : t(locale, "importRequestFailed");
-          setStep((s) => (s.kind === "offer-provider" ? { ...s, importing: false, error: message } : s));
-          return;
-        }
-        const value = result.value as { shadowing?: string } | undefined;
-        setStep({
-          kind: "done-provider",
-          routeName: name,
-          sourceName: source.name,
-          shadowing: value?.shadowing ?? null,
-        });
-      } catch (error) {
-        setStep((s) =>
-          s.kind === "offer-provider"
-            ? { ...s, importing: false, error: error instanceof Error ? error.message : String(error) }
-            : s,
-        );
-      }
-    };
-
-    const handoff = (): void => {
-      owner.openSection("modelspoke");
-      finish();
-    };
-
-    // The live collision warning (non-blocking): the name as typed
-    // (trimmed) against the registrable set — the probe-time
-    // `providerNames` (pi-ai keys ∪ route names ∪ built-ins, server-
-    // computed) unioned with the CURRENT route names from the live
-    // snapshot (a route added in another tab after the probe still warns).
-    const routeNames = routesOf(scope.getSnapshot().value).map((r) => r.name);
-    const collision =
-      step.kind === "offer-provider" && step.source !== null
-        ? providerCollision(step.name, providerNames, routeNames)
-        : null;
-
-    // Portaled to document.body (the dsh core OnboardingModal's contract):
-    // the step makes #root inert while visible, so a dialog rendered inside
-    // #root would be inert itself — its buttons unclickable and its inputs
-    // unfocusable. Outside the inert root the mask keeps the app blocked
-    // while the card stays interactive.
-    return createPortal(
-      <div style={stepStyle.overlay}>
-        <div style={stepStyle.mask} aria-hidden="true" />
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="modelspoke-onboarding-title"
-          style={stepStyle.card}
+    return (
+      <li style={ms.card}>
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+          style={ms.cardHeader}
         >
-          <h2 id="modelspoke-onboarding-title" style={stepStyle.title}>
-            {t(locale, "obTitle")}
-          </h2>
-           {step.kind === "offer-provider" ? (
-            step.source === null ? (
-              // The pick list (several local providers): name + baseURL per
-              // row, then the form for the chosen one.
-              <>
-                <p>
-                  {t(locale, "obFoundProviders", { count: providerOffers.length })}
-                </p>
-                <ul style={{ margin: "8px 0", paddingLeft: 20 }}>
-                  {providerOffers.map((p) => (
-                    <li key={p.name} style={stepStyle.row}>
-                      <span>
-                        <strong>{p.name}</strong> — <code>{p.baseURL}</code>
-                      </span>
-                      <button disabled={step.importing} onClick={() => pick(p)}>
-                        {t(locale, "select")}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                {step.error !== null && (
-                  <p style={stepStyle.error} role="alert">
-                    {step.error}
-                  </p>
-                )}
-                <div style={stepStyle.actions}>
-                  <button disabled={step.importing} onClick={finish} style={stepStyle.secondary}>
-                    {t(locale, "setUpLater")}
-                  </button>
-                </div>
-              </>
-            ) : (
-              // The import form (single candidate, or the picked one).
-              <>
-                {providerOffers.length === 1 ? (
-                  <p>{t(locale, "obFoundSingle")}</p>
-                ) : (
-                  <p>
-                    {t(locale, "obImportProviderStart")}{" "}
-                    <code>{step.source.name}</code>{" "}
-                    {t(locale, "obImportProviderEnd")}
-                  </p>
-                )}
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void runProvision();
-                  }}
-                  style={{ marginTop: 4 }}
-                >
-                  <label style={stepStyle.field}>
-                    {t(locale, "labelName")}
-                    <br />
-                    <input
-                      value={step.name}
-                      disabled={step.importing}
-                      onChange={(e) => patchForm({ name: e.target.value })}
-                    />
-                  </label>
-                  <label style={stepStyle.field}>
-                    {t(locale, "labelBaseUrl")}
-                    <br />
-                    <input
-                      value={step.baseURL}
-                      disabled={step.importing}
-                      onChange={(e) => patchForm({ baseURL: e.target.value })}
-                    />
-                  </label>
-                  <KeyNote source={step.source} locale={locale} />
-                  {collision !== null && <CollisionWarning colliding={collision} locale={locale} />}
-                  {step.error !== null && (
-                    <p style={stepStyle.error} role="alert">
-                      {step.error}
-                    </p>
-                  )}
-                  <div style={stepStyle.actions}>
-                    <button type="submit" disabled={step.importing}>
-                      {step.importing ? t(locale, "importing") : t(locale, "import")}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={step.importing}
-                      onClick={finish}
-                      style={stepStyle.secondary}
-                    >
-                      {t(locale, "setUpLater")}
-                    </button>
-                  </div>
-                </form>
-              </>
-            )
-          ) : (
-            // done-provider: the success view.
-            <>
-              <p>
-                {t(locale, "obDoneProviderStart")}{" "}
-                <code>{step.sourceName}</code>{" "}
-                {t(locale, "obDoneProviderMid")}{" "}
-                <code>{step.routeName}</code>
-                {t(locale, "obDoneProviderEnd")}
-              </p>
-              {step.shadowing !== null && <CollisionWarning colliding={step.shadowing} locale={locale} />}
-              <p style={stepStyle.hint}>{t(locale, "obDoneProviderHint")}</p>
-              <div style={stepStyle.actions}>
-                <button onClick={handoff}>{t(locale, "openModelspoke")}</button>
-                <button onClick={finish} style={stepStyle.secondary}>
-                  {t(locale, "done")}
-                </button>
-              </div>
-            </>
-          )}
+          <span style={ms.cardHeadText}>
+            <span style={ms.cardName}>{t(locale, "pluginCardTitle")}</span>
+            <span style={ms.cardDescription}>{t(locale, "pluginCardDescription")}</span>
+          </span>
+          <span
+            aria-hidden="true"
+            style={{
+              ...ms.cardChevron,
+              ...(open ? { transform: "rotate(180deg)" } : {}),
+            }}
+          >
+            ▾
+          </span>
+        </button>
+        <div style={{ ...ms.cardBody, display: open ? "block" : "none" }}>
+          <ModelspokeSection />
         </div>
-      </div>,
-      document.body,
+      </li>
     );
   };
 
-  ctx.slots.inject("settings.onboarding", () =>
-    ctx.slots.register({
-      name: "settings.onboarding",
-      id: "modelspoke-import",
-      order: 100,
-    }, ModelspokeOnboardingStep),
+  ctx.slots.inject("settings.plugin.item", () =>
+    ctx.slots.register({ name: "settings.plugin.item", key: "modelspoke" }, ModelspokeCard),
   );
 
   // tool view

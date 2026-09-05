@@ -446,6 +446,8 @@ async function openModelspoke(browser, url) {
     await openSidebar.first().click();
     await page.waitForTimeout(800);
   }
+  // Settings → Plugins → Plugin configuration (the first tab) → the
+  // modelspoke card — the disclosure starts collapsed; expand it.
   await page.evaluate(() => {
     const els = [...document.querySelectorAll('button, a, [role="tab"]')];
     els.find((l) => (l.textContent || "").trim().toLowerCase() === "settings")?.click();
@@ -453,8 +455,22 @@ async function openModelspoke(browser, url) {
   await page.waitForTimeout(1500);
   await page.evaluate(() => {
     const els = [...document.querySelectorAll('button, a, [role="tab"]')];
-    els.find((l) => (l.textContent || "").trim().toLowerCase() === "modelspoke")?.click();
+    els.find((l) => (l.textContent || "").trim().toLowerCase() === "plugins")?.click();
   });
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => {
+    const els = [...document.querySelectorAll('button, a, [role="tab"]')];
+    els.find((l) => (l.textContent || "").trim().toLowerCase() === "plugin configuration")?.click();
+  });
+  await page.waitForTimeout(500);
+  const card = page.locator('button[aria-expanded]', { hasText: "Modelspoke" });
+  await until(async () => {
+    const count = await card.count();
+    if (count === 0) return false;
+    if ((await card.first().getAttribute("aria-expanded")) === "true") return true;
+    await card.first().click().catch(() => undefined);
+    return false;
+  }, { timeout: 20000, what: "the modelspoke card expanded" });
   await until(
     () =>
       page.evaluate(() => {
@@ -469,27 +485,14 @@ async function openModelspoke(browser, url) {
   return { context, page, pageErrors };
 }
 
-/**
- * A fresh BLANK context (page loaded, no navigation) — for the journeys that
- * drive the onboarding overlay itself. The overlay keeps `#root` inert while
- * it is up, so the app (sidebar, settings) is blocked; those journeys must
- * enter THROUGH the dialog (its "Open Modelspoke" handoff), not around it.
- */
-async function openBlankContext(browser, url) {
-  const context = await browser.newContext({ viewport: { width: 1400, height: 900 } });
-  const page = await context.newPage();
-  const pageErrors = [];
-  page.on("pageerror", (e) => pageErrors.push(String(e)));
-  page.on("dialog", (d) => d.accept()); // window.confirm on provider delete
-  await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
-  await page.waitForTimeout(3000);
-  return { context, page, pageErrors };
-}
-
 /** The modelspoke section's locators (pinned against dsh 0.1.1-rc.2). */
 function ui(page) {
+  // The row's li is the NEAREST li ancestor of its Edit button — a broader
+  // `li:has(...)` also matches the Plugins-page plugin card (the whole
+  // section sits inside one card li), whose first status dot belongs to
+  // the FIRST row, not the one addressed.
   const row = (name) =>
-    page.locator("li", { has: page.getByRole("button", { name: `Edit provider ${name}` }) });
+    page.getByRole("button", { name: `Edit provider ${name}` }).locator("xpath=ancestor::li[1]");
   return {
     addProvider: page.getByRole("button", { name: "+ Add provider" }),
     emptyState: page.getByText("No providers yet"),
@@ -537,9 +540,6 @@ async function typeInput(page, locator, value) {
     value,
   );
 }
-
-const onboardingDialog = (page) =>
-  page.locator('div[role="dialog"][aria-labelledby="modelspoke-onboarding-title"]');
 
 async function j1_firstProvider(root, home, page, swap) {
   const u = ui(page);
@@ -800,164 +800,6 @@ async function j10_deadPort(home, page) {
   ok(readSettings(home).modelspoke.routes.every((r) => r.name !== "dead"), "J10: the dead route is gone from YAML");
 }
 
-/**
- * J2 — onboarding import from a local custom provider (env-sourced key).
- * The offer pre-fills the name (modelspoke-<name>) + base URL and shows the
- * key note; Import writes the route with the env REF — the key's VALUE never
- * lands in settings.yaml. Then a served-through headless turn with the key
- * set (the Bearer header proves the env ref resolved through modelspoke).
- */
-async function j2_import(root, home, browser, url, swap) {
-  // The scenario state must exist BEFORE the context opens: the onboarding
-  // step probes once on mount, so the provider has to be in settings.yaml
-  // when the fresh page's chain reaches the modelspoke step (the web's
-  // settings watcher picks up the out-of-band write in the meantime).
-  const doc = baseSettings();
-  doc["llm-pi-ai"] = {
-    providers: {
-      "fake-local": {
-        displayName: "fake-local",
-        apiKeyEnv: "E2E_FAKE_KEY",
-        api: "openai-completions",
-        baseURL: swap.baseUrl,
-        models: [{ id: "fake-text" }],
-      },
-    },
-  };
-  writeSettings(home, doc);
-  await sleep(1000); // settle: let the web's settings watcher reload
-
-  const { context, page } = await openBlankContext(browser, url);
-  const dialog = onboardingDialog(page);
-  await until(async () => {
-    const count = await dialog.count();
-    if (count === 0) return false;
-    const text = await dialog.innerText().catch(() => "");
-    return text.includes("Found a custom provider");
-  }, { timeout: 45000, what: "the custom-provider offer" });
-
-  const inputs = dialog.locator("input");
-  eq(await inputs.nth(0).inputValue(), "modelspoke-fake-local", "J2: the name pre-fills modelspoke-<name>");
-  eq(await inputs.nth(1).inputValue(), swap.baseUrl, "J2: the base URL pre-fills from the source provider");
-  match(await dialog.innerText(), /environment variable E2E_FAKE_KEY/, "J2: the env-key note names the variable");
-
-  await dialog.getByRole("button", { name: "Import" }).click();
-  await until(async () => (await dialog.innerText()).includes("Imported"), { timeout: 30000, what: "the imported view" });
-  await dialog.getByRole("button", { name: "Open Modelspoke" }).click();
-  await until(() => ui(page).edit("modelspoke-fake-local").count(), { what: "the imported route in the section" });
-
-  const text = settingsText(home);
-  const d = readSettings(home);
-  const route = d.modelspoke?.routes?.find((r) => r.name === "modelspoke-fake-local");
-  ok(route !== undefined, "J2: the route was written");
-  eq(route.baseURL, swap.baseUrl, "J2: the route's baseURL = the source provider's");
-  eq(route.apiKeyEnv, "E2E_FAKE_KEY", "J2: the env REF is written");
-  ok(!text.includes("dummy-key-value"), "J2: the key VALUE never lands in settings.yaml");
-  ok(d["llm-pi-ai"]?.providers?.["fake-local"] !== undefined, "J2: the source custom provider is untouched");
-
-  d["agent-default-model"] = { provider: "modelspoke-fake-local", model: "fake-text" };
-  writeSettings(home, d);
-  const before = swap.readBackendLog("fake-text").length;
-  const { out } = headlessTurn(root, home, "Reply with exactly the word: PONG", {
-    env: { E2E_FAKE_KEY: "dummy-key-value" },
-  });
-  ok(out.includes("PONG"), "J2: the served-through turn works");
-  const req = swap.readBackendLog("fake-text").slice(before).at(-1);
-  ok(req !== undefined, "J2: the fake backend saw the J2 turn");
-  eq(req.body.model, "fake-text", "J2: the wire model id is the source provider's model");
-  eq(req.headers.authorization, "Bearer dummy-key-value", "J2: the env-sourced key rides as Bearer");
-  await context.close();
-}
-
-/**
- * J3 — while the hand-written block is present, adapter registration is
- * refused all-or-nothing (the block keeps serving); once removed, modelspoke
- * serves from the DISCOVERY tier, not a seeded override.
- */
-async function j3_migration(root, home, browser, url, swap) {
-  // writeSettings replaces the whole file — no modelspoke section, so the offer fires instead of the ready-skip.
-  const doc = baseSettings();
-  doc["llm-pi-ai"] = { providers: { "llama-swap": handWrittenBlock(swap.baseUrl) } };
-  doc["agent-default-model"] = { provider: "llama-swap", model: "fake-flagship", reasoningEffort: "medium" };
-  writeSettings(home, doc);
-  await sleep(1000); // settle: let the web's settings watcher reload
-
-  const { context, page } = await openBlankContext(browser, url);
-  const dialog = onboardingDialog(page);
-  await until(async () => {
-    const count = await dialog.count();
-    if (count === 0) return false;
-    return (await dialog.innerText()).includes("Found a custom provider");
-  }, { timeout: 45000, what: "the custom-provider offer" });
-
-  const inputs = dialog.locator("input");
-  eq(await inputs.nth(0).inputValue(), "modelspoke-llama-swap", "J3: the name pre-fills modelspoke-<name>");
-  eq(await inputs.nth(1).inputValue(), swap.baseUrl, "J3: the base URL pre-fills from the block");
-  match(await dialog.innerText(), /environment variable LLAMA_SWAP_API_KEY/, "J3: the env-key note names the variable");
-
-  // Rename onto the block's own key for id continuity (agent-default-model
-  // already points at provider `llama-swap`): a registrable name, so the
-  // live non-blocking collision warning must appear.
-  await inputs.nth(0).fill("llama-swap");
-  await until(async () => (await dialog.innerText()).includes("would keep serving and shadow"), {
-    timeout: 15000,
-    what: "the live collision warning",
-  });
-
-  await dialog.getByRole("button", { name: "Import" }).click();
-  await until(async () => (await dialog.innerText()).includes("Imported"), {
-    timeout: 30000,
-    what: "the imported view",
-  });
-  // The server reports the shadowing (the block's key is a registrable
-  // name) — the done view carries the warning, no "seeded" copy.
-  match(
-    await dialog.innerText(),
-    /would keep serving and shadow/,
-    "J3: the done view carries the server-reported shadowing",
-  );
-  await dialog.getByRole("button", { name: "Open Modelspoke" }).click();
-  await until(() => ui(page).edit("llama-swap").count(), { what: "the imported route in the section" });
-
-  const d = readSettings(home);
-  const route = d.modelspoke?.routes?.find((r) => r.name === "llama-swap");
-  ok(route !== undefined, "J3: the llama-swap route was written");
-  eq(route.baseURL, swap.baseUrl, "J3: the route's baseURL = the block's");
-  eq(route.apiKeyEnv, "LLAMA_SWAP_API_KEY", "J3: the block's apiKeyEnv carried");
-  ok(!("models" in route), "J3: FULL_CATALOG route (no model list written)");
-  ok(!("overrides" in route), "J3: no seeded per-model overrides (the deep path is gone)");
-  ok(d["llm-pi-ai"]?.providers?.["llama-swap"] !== undefined, "J3: the hand-written block is untouched");
-
-  const sink = installLogSink(root);
-  const keyEnv = { LLAMA_SWAP_API_KEY: "e2e-dummy" };
-  const shadowed = headlessTurn(root, home, "Reply with exactly the word: PONG", { sink, env: keyEnv });
-  ok(shadowed.out.includes("PONG"), "J3: the shadowed boot still serves (hand-written block)");
-  ok(
-    shadowed.sinkLines.some((l) => l.includes("modelspoke: adapter route registration failed")),
-    "J3: shadowing → the adapter route registration was refused (logged)",
-  );
-
-  const cleared = readSettings(home);
-  delete cleared["llm-pi-ai"]?.providers?.["llama-swap"];
-  writeSettings(home, cleared);
-  const freed = headlessTurn(root, home, "Reply with exactly the word: PONG", { sink, env: keyEnv });
-  ok(freed.out.includes("PONG"), "J3: after the block is removed, modelspoke serves");
-  ok(
-    !freed.sinkLines.some((l) => l.includes("modelspoke: adapter route registration failed")),
-    "J3: no registration refusal once unshadowed",
-  );
-  ok(
-    freed.sinkLines.some((l) => l.includes("modelspoke: resolved llama-swap/fake-flagship")),
-    "J3: the resolve log line shows modelspoke owned the turn",
-  );
-  const req = swap.mainTurnRequest("fake-flagship");
-  ok(req !== undefined, "J3: the fake backend saw the freed turn");
-  // The $var kwargs ride the wire from the DISCOVERY tier (the fake
-  // llama-swap's meta.llamaswap), not a seeded override.
-  eq(req.body.chat_template_kwargs?.reasoning_effort, "medium", "J3: the $var kwargs ride the wire (medium)");
-  eq(req.body.chat_template_kwargs?.enable_thinking, true, "J3: the $var kwargs ride the wire (thinking on)");
-  await context.close();
-}
 
 /**
  * J11 — live-provider discovery against REAL local servers (catalog only,
@@ -1091,12 +933,6 @@ async function main() {
     console.log("── J10: dead port");
     await j10_deadPort(home, s.page);
     await s.context.close();
-
-    console.log("── J2: onboarding import from a local custom provider");
-    await j2_import(root, home, browser, web.url, swap);
-
-    console.log("── J3: provider import of the hand-written llama-swap block");
-    await j3_migration(root, home, browser, web.url, swap);
 
     console.log("── J11: live-provider discovery (catalog only, skip if unreachable)");
     s = await openModelspoke(browser, web.url);
