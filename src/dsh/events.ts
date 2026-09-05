@@ -37,7 +37,6 @@ import type {
 } from "@earendil-works/pi-ai";
 import { isContextOverflow } from "@earendil-works/pi-ai";
 import {
-  CallId,
   EMPTY_RESPONSE_CODE,
   CONTEXT_WINDOW_EXCEEDED_CODE,
   QUOTA_EXCEEDED_CODE,
@@ -46,6 +45,7 @@ import {
   LlmError,
 } from "@deepseek-ai/dsh-llm";
 import type { FinishReason, StreamChunk, TokenUsage } from "@deepseek-ai/dsh-llm";
+import { callId } from "./compat.js";
 
 /** Fold pi-ai usage into dsh TokenUsage (reasoning already inside output). */
 export function mapUsage(usage: AssistantMessage["usage"]): TokenUsage {
@@ -185,7 +185,9 @@ export async function* toStreamChunks(
         yield {
           type: "tool-call-delta",
           index: event.contentIndex,
-          id: CallId(captured?.id ?? (block && block.type === "toolCall" ? block.id : "")),
+          // `as never`: callId resolves the loaded dsh-llm's brand at runtime; never
+          // is assignable to either 0.1.1's CallId or 0.1.2's ToolCallId.
+          id: callId(captured?.id ?? (block && block.type === "toolCall" ? block.id : "")) as never,
           name: captured?.name ?? (block && block.type === "toolCall" ? block.name : undefined),
           argumentsDelta: event.delta,
         };
@@ -199,7 +201,7 @@ export async function* toStreamChunks(
           index: event.contentIndex,
           block: {
             type: "tool-call",
-            id: CallId(toolCall.id),
+            id: callId(toolCall.id) as never,
             name: toolCall.name,
             // pi-ai delivers a PARSED object; the harness wants the RAW JSON
             // string the model produced — re-serialize at this boundary.

@@ -31,7 +31,7 @@ import type {
   DirectoryRegistrationHandle,
   LlmConfigurableProvider,
 } from "@deepseek-ai/dsh-llm";
-import { deepEqualJson, installSettingsSection, settingsNamespace } from "@deepseek-ai/dsh-settings";
+import { deepEqualJson, installSettingsSection, settingsNamespace } from "./compat.js";
 import { extractFromEntry, fetchModels } from "../discovery/index.js";
 import { normalizeRouteBaseUrl } from "../discovery/url.js";
 import { ModelspokeAdapter } from "./adapter.js";

@@ -4,7 +4,13 @@ Coarse and consumer-facing — the kind of thing a dsh user or a `./lib`
 consumer can act on. Build-internal work (tests, comments, docs) does not
 belong here.
 
-## Unreleased
+## 0.1.3 — 2026-09-05
+
+- **Works under a dsh 0.1.2 host** — modelspoke now loads and serves its routes
+  on dsh 0.1.2 (the `dsh-llm`/`dsh-settings` API changes that made it fail to
+  load after a dsh update are now handled); 0.1.1 is still supported.
+
+## 0.1.2 — 2026-09-05
 
 - **The install is a single command with no pnpm build-script approval** —
   modelspoke no longer pulls its own pi-ai copy into the profile; it uses the

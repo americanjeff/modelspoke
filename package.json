@@ -1,6 +1,6 @@
 {
   "name": "modelspoke",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "license": "MIT",
   "description": "Local OpenAI-compatible model-server discovery + tiered reasoning-metadata resolution for DeepSeek Harness (dsh).",
   "author": "American Jeff <jeff@americanjeff.com>",
