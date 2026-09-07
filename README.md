@@ -34,7 +34,8 @@ Models with multimodal capabilities are great but if you add them via the dsh cu
 
 ## Installation & setup
 
-Prerequisite: a recent dsh with the `dsh plugin` command.
+Prerequisite: dsh **0.1.2** (verified against 0.1.2-rc.1) with the
+`dsh plugin` command.
 
 1. **Install:** dsh installs plugins with a tool called pnpm. If you don't
    have it yet, install it first:

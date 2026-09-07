@@ -24,7 +24,7 @@ const LLSWAP_BIN = process.env.E2E_LLAMA_SWAP || "llama-swap";
 
 // The e2e selectors ride on dsh's own web UI, so a dsh bump can break them
 // silently — fail loud at the boundary (filestab's same guard).
-const DSH_VERSION = "0.1.1-rc.2";
+const DSH_VERSION = "0.1.2-rc.1";
 
 // The agent loop's system prompt opens with this — the discriminator for
 // the MAIN turn's request in the fake backend's log (the session-title
@@ -348,8 +348,11 @@ async function bootDshWeb(root, home) {
     stdio: ["ignore", fd, fd],
   });
   const url = await until(async () => {
-    const m = readFileSync(logPath, "utf8").match(/dsh web: http:\/\/127\.0\.0\.1:(\d+)/);
-    return m ? `http://127.0.0.1:${m[1]}` : undefined;
+    // 0.1.2 prints the browser-auth token in the banner
+    // (`dsh web: http://127.0.0.1:<port>/?token=…`) — capture the full URL;
+    // the bare-URL 0.1.1 form still matches.
+    const m = readFileSync(logPath, "utf8").match(/dsh web: (http:\/\/127\.0\.0\.1:\d+(?:\/[^\s]*)?)/);
+    return m ? m[1] : undefined;
   }, { timeout: 60000, what: "dsh web URL banner" });
   return {
     url,

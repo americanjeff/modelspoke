@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { CallId, createMessage, createUserMessage } from "@deepseek-ai/dsh-llm";
+import { ToolCallId, createMessage, createUserMessage } from "@deepseek-ai/dsh-llm";
 import type { GenerateOptions, ImageBlock, Message } from "@deepseek-ai/dsh-llm";
 import {
   ASSISTANT_IMAGE_TEXT,
@@ -93,7 +93,7 @@ describe("toPiContext — image resolution", () => {
 
   it("tool-result image resolves alongside the result's text (toolName recovery intact)", async () => {
     const store = new FakeStore();
-    const callId = CallId("call-img-1");
+    const callId = ToolCallId("call-img-1");
     const assistantCall = createMessage({
       role: "assistant",
       content: [{ type: "tool-call", id: callId, name: "read_image", arguments: '{"file_path":"/x.png"}' }],
@@ -124,7 +124,7 @@ describe("toPiContext — image resolution", () => {
   });
 
   it("toolName recovers when the tool result is second-to-last (the real request shape: new user message after it)", async () => {
-    const callId = CallId("call-img-3");
+    const callId = ToolCallId("call-img-3");
     const assistantCall = createMessage({
       role: "assistant",
       content: [{ type: "tool-call", id: callId, name: "read_image", arguments: "{}" }],
@@ -175,7 +175,7 @@ describe("toPiContext — guard invariant (never fail a turn on durable history)
   });
 
   it("tool-result image without a store → placeholder INSIDE the tool result, no throw", async () => {
-    const callId = CallId("call-img-2");
+    const callId = ToolCallId("call-img-2");
     const toolResult = createMessage({
       role: "user",
       content: [

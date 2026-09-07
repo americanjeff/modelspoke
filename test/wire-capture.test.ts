@@ -6,7 +6,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { CallId, createMessage, createUserMessage, ReasoningEffortId } from "@deepseek-ai/dsh-llm";
+import { ToolCallId, createMessage, createUserMessage, ReasoningEffortId } from "@deepseek-ai/dsh-llm";
 import type { GenerateOptions, ImageBlock, Message, StreamChunk } from "@deepseek-ai/dsh-llm";
 import { attributionHeaders } from "@deepseek-ai/dsh-llm";
 import { ModelspokeAdapter } from "../src/dsh/adapter.js";
@@ -313,7 +313,7 @@ describe("wire capture — attribution + auth + chat_template_kwargs", () => {
   it("emits usage before the terminal finish and nothing after; tool args stay raw JSON", async () => {
     process.env[KEY_ENV] = "dummy";
     try {
-      const callId = CallId("call-1");
+      const callId = ToolCallId("call-1");
       const toolResult = createMessage({
         role: "user",
         content: [{ type: "tool-result", toolCallId: callId, content: [{ type: "text", text: "42" }] }],
@@ -448,7 +448,7 @@ describe("wire capture — image input (attachment resolution + guard)", () => {
   it("read_image-style tool result: the result text stays in the tool slot, the image lifts into a user message", async () => {
     process.env[KEY_ENV] = "dummy";
     try {
-      const callId = CallId("call-wire-img");
+      const callId = ToolCallId("call-wire-img");
       const messages: Message[] = [
         createUserMessage({ content: [{ type: "text", text: "go" }], source: { kind: "user" } }),
         createMessage({
@@ -494,7 +494,7 @@ describe("wire capture — image input (attachment resolution + guard)", () => {
   it("image-ONLY tool result: the tool slot carries the (see attached image) stand-in", async () => {
     process.env[KEY_ENV] = "dummy";
     try {
-      const callId = CallId("call-wire-img-only");
+      const callId = ToolCallId("call-wire-img-only");
       const messages: Message[] = [
         createMessage({
           role: "assistant",

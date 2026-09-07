@@ -28,21 +28,23 @@ import type { UserConfig } from "tsdown";
 /** The row id the bundle registers under (== package name == Cordis row id). */
 const ID = "modelspoke";
 
-/** Baseline module-table rows a client bundle may require without declaring them. */
+/**
+ * Baseline module-table rows a client bundle may require without declaring
+ * them — PLATFORM_MODULES from the 0.1.2-rc.1 web shell (SRC
+ * packages/client/web/src/platform.ts; PRELOADED_CLIENT_EXTERNALS is empty
+ * in that release). The bundle's own runtime requires stay within this set
+ * (today: react + react/jsx-runtime only — every dsh import is type-only
+ * and erased); anything else MUST inline into the bundle.
+ */
 const EXTERNALS = new Set([
   "react",
   "react/jsx-runtime",
   "react-dom",
   "react-dom/client",
   "@deepseek-ai/cordis",
+  "@deepseek-ai/dsh-client-store",
   "@deepseek-ai/dsh-client-ui-slots",
   "@deepseek-ai/dsh-client-ui-primitives",
-  "@deepseek-ai/dsh-client-runtime/client",
-  // B3: the ctx.connection.api surface (llm.discoverModels). The row is a
-  // dynamic host bundle (the connection plugin is part of dsh's own web
-  // composition), so the browser module table answers the require after
-  // dsh.client.external names it.
-  "@deepseek-ai/dsh-client-connection/client",
 ]);
 
 export default [

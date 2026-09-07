@@ -4,6 +4,14 @@ Coarse and consumer-facing — the kind of thing a dsh user or a `./lib`
 consumer can act on. Build-internal work (tests, comments, docs) does not
 belong here.
 
+## 0.1.4 — 2026-09-06
+
+- **The web UI now works under dsh 0.1.2** — the browser half (the
+  Modelspoke settings card and its model rows) was built against the dsh
+  0.1.1 web shell and did not load under dsh 0.1.2. It is rebuilt against
+  the 0.1.2 shell (verified against a live 0.1.2-rc.1 `dsh web` with the
+  e2e suite); the node half still loads on both 0.1.1 and 0.1.2.
+
 ## 0.1.3 — 2026-09-05
 
 - **Works under a dsh 0.1.2 host** — modelspoke now loads and serves its routes

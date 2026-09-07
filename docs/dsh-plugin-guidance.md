@@ -2,9 +2,16 @@
 
 *Reference for the dsh (DeepSeek Harness) integration in `src/dsh/`: the
 adapter contract, the settings seam, and shipping a web UI. Behavior was
-verified against dsh **0.1.1-rc.2**; the exact signatures are in the
-npm-published dsh package (and its `@deepseek-ai/*` sub-packages) — consult
-those `.d.ts` files, don't copy from this doc.*
+verified against dsh **0.1.2-rc.1** (e2e: 85 assertions; unit: 796); the
+exact signatures are in the npm-published dsh package (and its
+`@deepseek-ai/*` sub-packages) — consult those `.d.ts` files, don't copy
+from this doc.*
+
+*Version tolerance: the **node half loads on both 0.1.1 and 0.1.2** — the
+symbols that moved between the two route through `src/dsh/compat.ts`
+(§3). The **client bundle targets the 0.1.2-rc.1 web shell** (its
+`ctx.remote` surface and module table, §2); it is built and e2e-verified
+against 0.1.2 and has not been verified against a 0.1.1 shell.*
 
 ## 1. Node half: registering an LLM adapter
 
@@ -34,6 +41,14 @@ A dsh plugin is a Cordis plugin (`name` / `inject` / `Config` /
   mix one generation's capabilities with another's endpoint). The abstract
   class takes **no constructor parameters** — constructor options are a
   per-concrete-adapter pattern.
+- **`imageRequestPricing(provider, model)` (added in 0.1.2)**: advisory
+  per-model image-input cost the token meter consults on estimation paths
+  (a manual compact triggers a full re-estimation). The base class defaults
+  to a no-op and the dispatcher calls it through an optional chain — a
+  concrete adapter is safe *forward*, but inheriting the 0.1.1 base class
+  (no such method) under a 0.1.2 host throws
+  `imageRequestPricing is not a function` at estimation time. That version
+  drift is the reason the dsh devDeps float with the host rather than pin.
 - **Model metadata shapes**: `LlmProviderInfo {id, name}`; `LlmModelInfo
   {provider, id, name, description?, inputModalities?}` (absent = unknown,
   explicit omission = negative capability); `LlmResolvedModelInfo` adds
@@ -192,8 +207,11 @@ route keys just need to be non-empty strings. The mechanism:
   is the key because a provider being *added* has no route to name yet).
   **One registration per namespace** (a second throws `DUPLICATE_DISCOVERY`).
   Request: `{provider?, baseURL?, api?, apiKey? (one-shot credential — the
-  harness never stores it), signal?}`; result: rows of `{id, name?,
-  contextWindow?, maxTokens?}`.
+  harness never stores it)}` — 0.1.2 dropped `signal` from the request
+  object; the abort signal arrives as the callback's **second argument**:
+  `discover(request, signal?)` (the 0.1.1 callback read `request.signal`).
+  Result: rows of `{id, name?, contextWindow?, maxTokens?}` — the client
+  half receives the same rows as `LlmDiscoveredModel[]` (§2.3).
 
 Embodied in `src/dsh/index.ts` (adapter + directory + discovery registration,
 `onChange` re-registration) and `src/dsh/settings.ts` (schema + write gate).
@@ -214,12 +232,25 @@ object in the package's `package.json`:
   "bundle": { "patch": "./dsh.cordis.yml" },   // server row (existing)
   "client": {
     "platform": "web",       // REQUIRED — must be the literal 'web'
-    "inject": [ ... ],       // INFORMATIONAL only (preflight display, HMR
-                             // diffing) — NOT a runtime gate
+    "inject": [ ... ],       // Cordis inject edges: the provider package rows
+                             // whose services the bundle consumes (modelspoke:
+                             // dsh-api-remotes, dsh-api-session-controller,
+                             // dsh-client-connection, dsh-client-ui-renderer,
+                             // dsh-client-ui-settings). Composition orders
+                             // suppliers before consumers and guides factory
+                             // arrival; cordis service-wait remains the
+                             // activation authority — a missing provider shows
+                             // up as a PENDING fiber at the settled sweep
     "immediately": false,    // true = stage-one boot prefetch; absent = lazy
-    "external": [ ... ]      // module-table requests beyond the implicit
-                             // baseline (react, react-dom, cordis,
-                             // dsh-client-ui-slots, dsh-client-ui-primitives)
+    "external": []           // module-table requests beyond the implicit
+                             // baseline. 0.1.2 baseline (PLATFORM_MODULES):
+                             // react, react/jsx-runtime, react-dom,
+                             // react-dom/client, cordis, dsh-client-store,
+                             // dsh-client-ui-slots, dsh-client-ui-primitives.
+                             // PRELOADED_CLIENT_EXTERNALS is empty (the 0.1.1
+                             // preload of dsh-client-runtime/client is gone).
+                             // modelspoke requires only react +
+                             // react/jsx-runtime at runtime → []
   }
 },
 "exports": { "./client": "./dist/dsh/client.js", ... }   // REQUIRED once
@@ -229,6 +260,22 @@ object in the package's `package.json`:
 The browser bundle is the **built artifact** — the host hashes the file and
 serves it as-is (no-cache, `/plugins/<id>/client.js`); sources are never
 served.
+
+**Dev-time versioning (the 0.1.2 line).** The dsh client packages are
+dev-only *type inputs* — the shipped profile supplies the runtime
+identities, so the browser never loads modelspoke's `node_modules`. The
+`devDependencies` therefore float on the **`next` dist-tag** rather than a
+version range: dist-tags are the only cross-prerelease-series float (a
+range like `^0.1.1-rc.2` never matches `0.1.2-rc.1` under semver prerelease
+rules, and `*` excludes prereleases); the lockfile pins whatever `next`
+resolved to until you `pnpm update`. One harness-side wrinkle: the
+published 0.1.2-rc.1 packages' *peer* ranges are still shaped for the 0.1.1
+line, so a plain resolve drags a 0.1.1-rc.2 sub-tree into the typecheck
+program — stale Context augmentations and a split `TypertRemoteNamespaceMap`
+(`ctx.remote.llm` untyped) — even though the runtime is consistent. The
+`pnpm-workspace.yaml` override table forces the whole dsh family to one
+0.1.2-rc.1 set; it is dev-only (zero runtime effect) and can be dropped
+once the harness republishes with self-consistent peer ranges.
 
 **The scanner's row-name precondition (the one structural blocker).** The
 client scanner resolves the package by the *row name*:
@@ -269,7 +316,8 @@ For modelspoke the relevant ones:
 
 The big question — can a plugin's *browser* code invoke its *own*
 server-side logic? **Yes: the Connection package ships a generic,
-bundle-open RPC-channel registry** (verified shipped in rc.2):
+bundle-open RPC-channel registry** (re-verified on 0.1.2-rc.1 —
+modelspoke's `discoverMetadata` e2e rides it):
 
 ```
 host (dsh process, server apply):
@@ -299,48 +347,74 @@ whichever order the two fibers activate, guarded idempotently. The endpoint
 segment grammar is `[A-Za-z0-9_$.-]` — **no hyphens** (`discoverMetadata`,
 not `discover-metadata`).
 
-**The shared `/api` surface** (typed `ctx.connection.api`) is callable from
-any client bundle and covers the rest: `settings.describe/update/replace/mutate`
-(`mutate` = `{ns, ops: [{op:'set'|'unset', path, value?}], expectedRevision?}`;
-every response carries the namespace's new **redacted** view with a monotonic
-`revision`), `llm.discoverModels` (the host dispatches straight into the
-plugin's registered discovery callback — the same call the in-repo Models page
-makes), `llm.providers`/`llm.models`, `credentials.*`. The whole configuration
-plane is **loopback-pinned** — a non-loopback (LAN) browser simply gets no
-durable settings. For reads + simple writes, the ergonomic client face is
-`ctx.settingsScope.bind({namespace})` — snapshot/subscribe plus
-revision-fenced `set`/`unset` (single top-level field per write; use
+**The shared remote surface** (typed `ctx.remote`) is callable from any
+client bundle and covers the rest. 0.1.2 removed the 0.1.1
+`ctx.connection.api.<ns>` client — `ConnectionHandle.api` is gone with the
+connection reorg — in favor of a **namespaced remote client**:
+`ctx.remote.llm.discoverModels(settingsNs, request, signal?)` (the same
+request shape as §1.5; the host dispatches straight into the plugin's
+registered discovery callback — the same call the in-repo Models page makes;
+keyed on the **settings namespace**, not a route, because the row being
+configured may not exist as a live route yet),
+`ctx.remote.llm.listConfigurableProviders` / `listProviders`,
+`ctx.remote.settings.*` (describe/update/replace/mutate — `mutate` =
+`{ns, ops: [{op:'set'|'unset', path, value?}], expectedRevision?}`; every
+response carries the namespace's new **redacted** view with a monotonic
+`revision`), `ctx.remote.credentials.*`. Every call resolves to a
+`RemoteResult<T>` envelope — `{ok: true, value}` / `{ok: false, error}`
+(`error.message` is the display string) — not a raw value. The whole
+configuration plane is **loopback-pinned** — a non-loopback (LAN) browser
+simply gets no durable settings. For reads + simple writes, the ergonomic
+client face is `ctx.settingsScope.bind({namespace})` — snapshot/subscribe
+plus revision-fenced `set`/`unset` (single top-level field per write; use
 `settings.mutate` for nested paths).
 
-**Forwarded events** a client may `$on` are a hard-coded allowlist:
-`settings/document-updated`, `llm/adapters-updated`,
-`credentials/reference-updated`, plus session/agent-preset rows — enough for
-live updates (route CRUD made anywhere → document event → scope re-derives;
-adapter registry changes → adapters-updated). Genuinely closed (and **not
-needed**): no bundle-defined method in the shared `/api` map, no
-bundle-defined forwarded events, no strict generated `Remote` for third-party
-packages — the generic channel + the existing methods + the existing events
-cover the full editor.
+**Forwarded events** are a hard-coded allowlist, subscribed in 0.1.2 on the
+remote client — `ctx.remote.$on('settings/document-updated', …)` (the 0.1.1
+subscription point was the connection face): `settings/document-updated`,
+`llm/adapters-updated`, `credentials/reference-updated`, plus session/
+agent-preset rows — enough for live updates (route CRUD made anywhere →
+document event → scope re-derives; adapter registry changes →
+adapters-updated). modelspoke's client doesn't even need the allowlist: its
+live re-sync rides the `settingsScope` binder's own `subscribe` (a scope
+snapshot changes on the same document update), so no `$on` appears in
+`client.tsx`. Genuinely closed (and **not needed**): no bundle-defined
+method in the remote map, no bundle-defined forwarded events, no strict
+generated `Remote` for third-party packages — the generic channel + the
+existing methods + the existing events cover the full editor.
 
-Embodied in `src/dsh/client.tsx` (the client half; E2E-verified in the
-testenv web profile).
+Embodied in `src/dsh/client.tsx` (the client half; e2e-verified against a
+live 0.1.2-rc.1 `dsh web` instance).
 
 ## 3. Settings writes — the seam
 
-The canonical consumer wiring is **`installSettingsSection(ctx, ns, schema,
-entry, hooks)`**: while a settings service exists, register the plugin's
-namespace with the composition entry as the `base` layer and hand the plugin a
-`current()` source thunk; when the service goes away (disposal, provider
-reload), fall back to the entry so the plugin keeps working exactly as
-composed. Hooks: `setSource` (source swapped at attach/detach), `onChange`
-(re-derive registration facts — this is where route re-registration happens),
-`validate` (refuse unserviceable writes at the write site).
+The canonical consumer wiring is the settings-section installer — **the seam
+moved in 0.1.2**: 0.1.1 shipped a free function
+`installSettingsSection(ctx, ns, schema, entry, hooks)`; 0.1.2 made it a
+method on the settings service, reached through the scoped
+`ctx.inject(['settings'], (sc) => sc.settings.installSection(…))` (a bare
+`ctx.settings` read is refused without the inject), and dropped the
+`settingsNamespace(name)` branded export — the namespace methods now take a
+plain lowercase-hyphenated string. modelspoke routes the moved symbols
+(installer, namespace brand, `deepEqualJson`) through `src/dsh/compat.ts` —
+a namespace import plus a runtime `??` pick, because a bare ESM named import
+of a moved symbol is a **link-time** throw, before any code runs — so one
+build wires on either host. The semantics are unchanged in both: while a
+settings service exists, register the plugin's namespace with the
+composition entry as the `base` layer and hand the plugin a `current()`
+source thunk; when the service goes away (disposal, provider reload), fall
+back to the entry so the plugin keeps working exactly as composed. Hooks:
+`setSource` (source swapped at attach/detach), `onChange` (re-derive
+registration facts — this is where route re-registration happens), `validate`
+(refuse unserviceable writes at the write site).
 
 Write paths from inside the plugin: `ctx.settings.update(NS, patch)` (merge),
 `ctx.settings.replace(NS, section)` (wholesale; `replace({})` resets to
 base+defaults), `ctx.settings.mutate(NS, [{op, path, value?}, …])`
 (path-addressed edits — the right tool when the caller holds a *redacted*
-view). All three validate before persisting, are serialized per-namespace, and
+view; in 0.1.2 these are reached inside the `ctx.inject(['settings'], …)`
+scope — `compat.ts` hides the difference). All three validate before
+persisting, are serialized per-namespace, and
 emit `settings/updated` (resolved value changed) and `settings/document-updated`
 (raw section changed); the plugin's `onChange` then re-registers.
 
@@ -375,7 +449,9 @@ flattens every non-text content block with `JSON.stringify`, so a human
 looking at the same turn sees a **JSON blob instead of the picture** — a
 human who can't see the image can't verify the model's claim about it. This
 stringify behavior is deliberate and pinned by a test (a behavior change, not
-a latent bug). The image-rendering machinery — bounded `<img>` + lightbox,
+a latent bug — re-verified on 0.1.2-rc.1: `ui-tool`'s `tool-call-model.ts`
+still stringifies non-text blocks in the generic card). The image-rendering
+machinery — bounded `<img>` + lightbox,
 loaded on demand via the session's attachment reader — already exists, but is
 keyed to *message* content only: a tool result's image block is never handed
 to it.

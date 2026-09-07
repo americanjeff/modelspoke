@@ -111,7 +111,7 @@ function apply(ctx: Context, config: unknown): void {
   // ONE registration per namespace (DUPLICATE_DISCOVERY on a second): the
   // function reads the CURRENT settings on every call, so route edits are
   // picked up without re-registering.
-  ctx.llm.registerModelDiscovery(NS, async (request) => {
+  ctx.llm.registerModelDiscovery(NS, async (request, signal) => {
     const routes = routesOf(section());
     const route =
       (request.provider !== undefined
@@ -136,7 +136,7 @@ function apply(ctx: Context, config: unknown): void {
     const entries = await fetchModels(
       normalizeRouteBaseUrl(route.baseURL),
       apiKey,
-      request.signal,
+      signal,
     );
     return entries.map((entry) => {
       const info = extractFromEntry(entry);

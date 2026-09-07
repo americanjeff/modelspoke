@@ -38,7 +38,7 @@
  * the `>` chevron drops the per-model detail, `−` removes; presence in the
  * list IS the served state; duplicate ids are legal variants; an empty-id
  * row is discarded on Apply. Expanding a provider silently fetches its
- * catalog through `api.llm.discoverModels` (host side: the node half's
+ * catalog through `ctx.remote.llm.discoverModels` (host side: the node
  * discovery callback, src/dsh/index.ts) and the node half's /modelspoke
  * channel `discoverMetadata` endpoint alongside it (cached per provider):
  * the detail seeds its display from committed ∪ discovered (committed wins
@@ -109,30 +109,49 @@
  */
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import type { ClientContext } from "@deepseek-ai/dsh-client-runtime/client";
-// The settled tool-call node types the read_image view renders over
-// (ToolCallBlock = RunningToolCall | ToolResultNode; ToolResultNode.content
-// carries the `[text envelope, image block]` result) plus the session
-// standard-kit id and the sessions service face (the byte loader:
-// `ISession.readAttachment`).
+// ClientContext is the host's cordis Context (the service-injected plugin
+// context); the 0.1.2-rc.1 client reorg dropped the old
+// dsh-client-runtime re-export, so name it directly from cordis.
+import type { Context as ClientContext } from "@deepseek-ai/cordis";
+// The session service face (the byte loader: `ISession.readAttachment`),
+// now owned by the session-controller client.
 import type {
   ISession,
   ISessions,
-  SessionId,
+} from "@deepseek-ai/dsh-api-session-controller/client";
+// The session standard-kit id (branded string), owned by dsh-session.
+import type { SessionId } from "@deepseek-ai/dsh-session/types";
+// The settings-namespace binder types; loading this module also pulls the
+// settings domain's SlotMap merge (the 'settings.section' entry) and the
+// ctx.settingsScope context merge into the program.
+import type {
   SettingsScope,
   SettingsScopeSnapshot,
+} from "@deepseek-ai/dsh-client-ui-settings/client";
+// The settled tool-call node types the read_image view renders over
+// (ToolCallBlock = RunningToolCall | ToolResultNode; ToolResultNode.content
+// carries the `[text envelope, image block]` result), now in the
+// conversation client.
+import type {
   ToolCallBlock,
   ToolResultNode,
-} from "@deepseek-ai/dsh-client-runtime/client";
-// Type-only: pulls the settings domain's SlotMap merge (the 'settings.section'
-// entry) and the ctx.settingsScope context merge into this program.
-import type {} from "@deepseek-ai/dsh-client-ui-settings/client";
-// Type-only: the ctx.connection service surface (the `api.llm.discoverModels`
-// request/response shapes — packages/client/connection contract,
-// dsh-host-apiproxy llm.discoverModels). The service itself is provided by
-// the host's own connection plugin (injected below); the bundle keeps no
+} from "@deepseek-ai/dsh-client-ui-conversation/client";
+// Type-only: the ctx.connection service surface (the `connection.rpc`
+// channel the card's metadata fetch rides). The service itself is provided
+// by the host's own connection plugin (injected below); the bundle keeps no
 // runtime reference to the module.
-import type { ConnectionHandle, DiscoveredModelView } from "@deepseek-ai/dsh-client-connection/client";
+import type { ConnectionHandle } from "@deepseek-ai/dsh-client-connection/client";
+// Type-only: the ctx.slots service augmentation (the renderer-owned
+// SlotRegistry the card's `slots.inject`/`slots.register` calls ride).
+import type {} from "@deepseek-ai/dsh-client-ui-renderer/client";
+// Type-only: the discovered-model row the `ctx.remote.llm.discoverModels`
+// RPC returns (the node half's registered discovery callback answers it).
+// The `ctx.remote` Context augmentation rides in with dsh-api-remotes/client,
+// which the dsh-llm/remote import below pulls in.
+import type { LlmDiscoveredModel } from "@deepseek-ai/dsh-llm/types";
+// Type-only: loads the `llm` Remote-namespace augmentation into the program
+// (adds `llm` to `TypertRemoteNamespaceMap`, so `ctx.remote.llm` is typed).
+import type {} from "@deepseek-ai/dsh-llm/remote";
 // Type-only: pulls the settings-plugins domain's SlotMap merge (the
 // 'settings.plugin.item' entry the Plugins page's configurable tab
 // declares at runtime) into this program — the same pattern as the
@@ -265,7 +284,8 @@ export const name = "modelspoke";
 /**
  * Required services: the slot registry, the settings-namespace binder, and
  * and the connection service — `ctx.get("connection")` yields the host's
- * wire client, whose `api.llm.discoverModels` interrogates a route's
+ * wire client (the card's `/modelspoke` metadata fetch rides its `rpc`
+ * channel); `ctx.remote.llm.discoverModels` interrogates a route's
  * endpoint (the same handler the node half registers —
  * `registerModelDiscovery` in src/dsh/index.ts). `settingsScope` serves both
  * the read path and
@@ -281,7 +301,7 @@ export const name = "modelspoke";
 // service (`reflect.provide('sessions', …)`, packages/client/runtime/src/
 // client/sessions/service.ts:348); the typed accessor `ctx.sessions` comes
 // from the runtime's Context merge (pulled in by the type import above).
-export const inject = ["slots", "settingsScope", "connection", "sessions"];
+export const inject = ["slots", "settingsScope", "connection", "sessions", "remote", "remote.llm"];
 
 /**
  * The exact namespace string the node half registers:
@@ -521,7 +541,7 @@ interface CatalogState {
   /** The inline failure (server down / status / malformed) — no write on error. */
   error?: string;
   /** The discovered catalog (discovered order), once fetched. */
-  models: DiscoveredModelView[];
+  models: LlmDiscoveredModel[];
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -1769,7 +1789,7 @@ function ModelDetail(props: {
 /**
  * The row's WIRE-ID combobox (the spec's id picker): a text input
  * that opens the FULL catalog listing on focus/click (the fetched
- * DiscoveredModelView rows — `name (id)` when the endpoint supplies a
+ * LlmDiscoveredModel rows — `name (id)` when the endpoint supplies a
  * name, else `id`), FILTERS on typing (case-insensitive substring over id
  * and name), and accepts a typed id that is not in the listing (the
  * free-text posture — the id is what the endpoint recognizes, the catalog
@@ -2142,13 +2162,13 @@ export function apply(ctx: ClientContext): void {
   };
 
   // The host's wire client (the connection service is injected above, so
-  // it is provided before this apply runs). `api.llm.discoverModels` routes
-  // to the node half's registered discovery callback (`registerModelDiscovery`
-  // in src/dsh/index.ts)
+  // it is provided before this apply runs). `ctx.remote.llm.discoverModels`
+  // routes to the node half's registered discovery callback
+  // (`registerModelDiscovery` in src/dsh/index.ts)
   // — the SAME interrogation the node adapter answers, so the card's silent
   // fetch sees the real endpoint catalog.
   const connection = ctx.get("connection") as ConnectionHandle;
-  const api = connection.api;
+  const remote = ctx.remote;
 
   /**
    * The Modelspoke settings page: loading / unavailable / empty / routes
@@ -2177,9 +2197,9 @@ export function apply(ctx: ClientContext): void {
     // (the detail's editable surface).
     const [card, setCard] = useState<CardDraft | null>(null);
     // The open card's expand-fetch catalog (the list area's loading /
-    // error / ready views) — the `api.llm.discoverModels` RPC (the node
-    // half's registered discovery callback — real catalog, no local copy;
-    // silent: no button, no dialog).
+    // error / ready views) — the `ctx.remote.llm.discoverModels` RPC (the
+    // node half's registered discovery callback — real catalog, no local
+    // copy; silent: no button, no dialog).
     const [catalog, setCatalog] = useState<CatalogState | null>(null);
     // The qwen3.8 fix: the per-provider DISCOVERED metadata cache
     // (route name → wire id → the discovered canonical fields), from the
@@ -2367,8 +2387,8 @@ export function apply(ctx: ClientContext): void {
 
     /**
      * The card's SILENT catalog fetch on expand — no fetch button, no
-     * selection dialog. Calls `api.llm.discoverModels` (the node half's
-     * registered discovery callback — real catalog, no local copy). On
+     * selection dialog. Calls `ctx.remote.llm.discoverModels` (the node
+     * half's registered discovery callback — real catalog, no local copy). On
      * success the row's dot goes green with "N models · last checked
      * HH:MM" and the fetched catalog feeds the count hint and the
      * FULL_CATALOG seed (viewed-only rows); on failure the list area shows
@@ -2385,18 +2405,16 @@ export function apply(ctx: ClientContext): void {
       const seq = ++catalogSeq.current;
       setCatalog({ route: routeName, status: "loading", models: [] });
       void (async (): Promise<void> => {
-        let models: DiscoveredModelView[] | null = null;
+        let models: LlmDiscoveredModel[] | null = null;
         let message: string | null = null;
         try {
-          const response = await api.llm.discoverModels({
-            settingsNs: NAMESPACE,
+          const result = await remote.llm.discoverModels(NAMESPACE, {
             provider: routeName,
           });
           // Narrow before the state updates: property-access narrowing does
           // not cross the closure boundary.
-          const result = response.result;
           if (!result.ok) message = result.error.message;
-          else models = result.value.models;
+          else models = result.value;
         } catch (error) {
           message = error instanceof Error ? error.message : String(error);
         }
