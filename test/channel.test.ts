@@ -5,6 +5,7 @@ import {
   discoverMetadataRow,
   installModelspokeChannel,
   makeChannelHandler,
+  makeModelspokeFetchRoute,
 } from "../src/dsh/channel.js";
 import { ollamaBackend } from "../src/discovery/ollama.js";
 
@@ -13,17 +14,69 @@ const sectionWith = (routes: unknown[], overrides: Record<string, unknown> = {})
   overrides,
 });
 
+/**
+ * A cordis-shaped fake: `inject(names, cb)` fires the callback immediately
+ * when every requested service is already provided, otherwise parks it and
+ * fires it when `provide` completes the set (the inject-seam semantics the
+ * 0.1.5 host gives plugins — the channel's only service seam).
+ */
 function fakeCtx(services: Record<string, unknown>) {
-  const listeners: Array<{ name: string; fn: (...args: unknown[]) => unknown; options?: unknown }> =
-    [];
+  const pending: Array<{
+    names: string[];
+    cb: (childCtx: { get: (name: string) => unknown }) => void;
+  }> = [];
   const ctx = {
     get: (name: string) => services[name],
-    on: (name: string, fn: (...args: unknown[]) => unknown, options?: unknown) => {
-      listeners.push({ name, fn, options });
+    on: (_name: string, _fn: (...args: unknown[]) => unknown, _options?: unknown) => {
+      return () => undefined;
+    },
+    inject: (names: string[], cb: (childCtx: { get: (name: string) => unknown }) => void) => {
+      if (names.every((n) => services[n] !== undefined)) {
+        cb({ get: (n: string) => services[n] });
+      } else {
+        pending.push({ names, cb });
+      }
+    },
+    provide: (name: string, value: unknown) => {
+      services[name] = value;
+      const still: typeof pending = [];
+      for (const entry of pending) {
+        if (entry.names.every((n) => services[n] !== undefined)) {
+          entry.cb({ get: (n: string) => services[n] });
+        } else {
+          still.push(entry);
+        }
+      }
+      pending.length = 0;
+      pending.push(...still);
       return () => undefined;
     },
   };
-  return { ctx: ctx as unknown as Context, listeners, services };
+  return { ctx: ctx as unknown as Context, services };
+}
+
+/** A fake Connection service recording the exact Fetch routes registered. */
+function fakeConnection() {
+  const registered: Array<{
+    path: string;
+    methods: readonly string[];
+    requestBody: string;
+    fetch: (request: Request) => Promise<Response>;
+  }> = [];
+  const connection = {
+    fetch: {
+      register: (route: {
+        path: string;
+        methods: readonly string[];
+        requestBody: string;
+        fetch: (request: Request) => Promise<Response>;
+      }) => {
+        registered.push(route);
+        return () => Promise.resolve();
+      },
+    },
+  };
+  return { connection, registered };
 }
 
 describe("channel handler (unknown endpoint)", () => {
@@ -42,61 +95,112 @@ describe("channel handler (unknown endpoint)", () => {
   });
 });
 
-describe("installModelspokeChannel (lazy connection)", () => {
+describe("installModelspokeChannel (the inject seam)", () => {
   it("is a silent no-op while no connection service exists (headless)", () => {
-    const { ctx, listeners } = fakeCtx({});
-    installModelspokeChannel(ctx, { section: () => ({}), log: () => undefined });
-    // No registration happened, but the activation listener is armed.
-    expect(listeners).toHaveLength(1);
-    expect(listeners[0].name).toBe("internal/service");
-    expect(listeners[0].options).toEqual({ global: true });
+    const { ctx } = fakeCtx({});
+    const log: string[] = [];
+    const { registered } = fakeConnection();
+    installModelspokeChannel(ctx, { section: () => ({}), log: (line) => log.push(line) });
+    // The inject fiber is parked; nothing is registered and nothing logged.
+    expect(registered).toHaveLength(0);
+    expect(log).toHaveLength(0);
   });
 
-  it("registers the loopback channel when the connection appears later, exactly once", () => {
-    const handles: Array<{ channel: string; options: unknown }> = [];
-    const connection = {
-      rpc: {
-        handle: (channel: string, _h: unknown, options: unknown) => {
-          handles.push({ channel, options });
-          return () => Promise.resolve();
-        },
-      },
-    };
-    const { ctx, listeners, services } = fakeCtx({});
-    installModelspokeChannel(ctx, { section: () => ({}), log: () => undefined });
-    expect(handles).toHaveLength(0);
-    for (const listener of listeners) {
-      if (listener.name === "internal/service") {
-        services["connection"] = connection;
-        listener.fn("connection", connection);
-      }
-    }
-    expect(handles).toHaveLength(1);
-    expect(handles[0].channel).toBe("/modelspoke");
-    expect(handles[0].options).toEqual({ authority: "loopback" });
-    for (const listener of listeners) {
-      if (listener.name === "internal/service") listener.fn("connection", connection);
-    }
-    expect(handles).toHaveLength(1);
-    for (const listener of listeners) {
-      if (listener.name === "internal/service") listener.fn("settings", {});
-    }
-    expect(handles).toHaveLength(1);
+  it("registers the endpoint when the connection appears later, exactly once", () => {
+    const { ctx, services } = fakeCtx({});
+    const { connection, registered } = fakeConnection();
+    const log: string[] = [];
+    installModelspokeChannel(ctx, { section: () => ({}), log: (line) => log.push(line) });
+    expect(registered).toHaveLength(0);
+    (ctx as unknown as { provide: (n: string, v: unknown) => unknown }).provide("connection", connection);
+    expect(registered).toHaveLength(1);
+    expect(registered[0].path).toBe("/api/modelspoke");
+    expect(registered[0].methods).toEqual(["POST"]);
+    expect(registered[0].requestBody).toBe("buffered");
+    expect(log).toEqual([
+      "modelspoke: /api/modelspoke loopback endpoint registered (discoverMetadata)",
+    ]);
+    // A second provision of the same service re-arrives: the installed
+    // guard keeps the registration singular.
+    (ctx as unknown as { provide: (n: string, v: unknown) => unknown }).provide("connection", connection);
+    expect(registered).toHaveLength(1);
   });
 
   it("registers immediately when the connection already exists at apply time", () => {
-    const handles: Array<{ channel: string }> = [];
-    const connection = {
-      rpc: {
-        handle: (channel: string, _h: unknown, _options: unknown) => {
-          handles.push({ channel });
-          return () => Promise.resolve();
+    const { connection, registered } = fakeConnection();
+    const { ctx } = fakeCtx({ connection });
+    installModelspokeChannel(ctx, { section: () => ({}), log: () => undefined });
+    expect(registered).toHaveLength(1);
+    expect(registered[0].path).toBe("/api/modelspoke");
+  });
+
+  it("logs a failed registration instead of throwing", () => {
+    const failing = {
+      fetch: {
+        register: () => {
+          throw new Error("boom");
         },
       },
     };
-    const { ctx } = fakeCtx({ connection });
-    installModelspokeChannel(ctx, { section: () => ({}), log: () => undefined });
-    expect(handles).toEqual([{ channel: "/modelspoke" }]);
+    const { ctx } = fakeCtx({ connection: failing });
+    const log: string[] = [];
+    expect(() =>
+      installModelspokeChannel(ctx, { section: () => ({}), log: (line) => log.push(line) }),
+    ).not.toThrow();
+    expect(log).toEqual([
+      "modelspoke: loopback endpoint registration failed: boom",
+    ]);
+  });
+});
+
+describe("makeModelspokeFetchRoute (the transport envelope)", () => {
+  const post = (body: unknown, contentType = "application/json"): Request =>
+    new Request("http://127.0.0.1:1/api/modelspoke", {
+      method: "POST",
+      headers: { "content-type": contentType },
+      body: typeof body === "string" ? body : JSON.stringify(body),
+    });
+
+  it("rejects a non-JSON content type with 415", async () => {
+    const route = makeModelspokeFetchRoute({ section: () => ({}), log: () => undefined });
+    const response = await route.fetch(post({ endpoint: "discoverMetadata", payload: {} }, "text/plain"));
+    expect(response.status).toBe(415);
+  });
+
+  it("rejects a non-JSON body with 400", async () => {
+    const route = makeModelspokeFetchRoute({ section: () => ({}), log: () => undefined });
+    const response = await route.fetch(post("not json" as never));
+    expect(response.status).toBe(400);
+  });
+
+  it("rejects a malformed envelope with 400", async () => {
+    const route = makeModelspokeFetchRoute({ section: () => ({}), log: () => undefined });
+    for (const body of [{}, { endpoint: 5, payload: {} }, { endpoint: "discoverMetadata" }]) {
+      const response = await route.fetch(post(body));
+      expect(response.status).toBe(400);
+    }
+  });
+
+  it("round-trips the handler result as JSON 200 (business failures ride the slot)", async () => {
+    const route = makeModelspokeFetchRoute({
+      section: () => ({ routes: [], overrides: {} }),
+      log: () => undefined,
+    });
+    // Unknown endpoint → the handler's closed bad-request, on a 200 body.
+    const unknown = await route.fetch(post({ endpoint: "bogus", payload: {} }));
+    expect(unknown.status).toBe(200);
+    expect(await unknown.json()).toEqual({
+      ok: false,
+      error: { code: "bad-request", message: "unknown /modelspoke endpoint: bogus", details: { issues: [] } },
+    });
+    // Unknown provider → the handler's closed bad-request (no network).
+    const unknownProvider = await route.fetch(
+      post({ endpoint: "discoverMetadata", payload: { provider: "nope" } }),
+    );
+    expect(unknownProvider.status).toBe(200);
+    const value = (await unknownProvider.json()) as { ok: boolean; error: { code: string } };
+    expect(value.ok).toBe(false);
+    expect(value.error.code).toBe("bad-request");
   });
 });
 

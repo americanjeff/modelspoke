@@ -39,8 +39,9 @@
  * list IS the served state; duplicate ids are legal variants; an empty-id
  * row is discarded on Apply. Expanding a provider silently fetches its
  * catalog through `ctx.remote.llm.discoverModels` (host side: the node
- * discovery callback, src/dsh/index.ts) and the node half's /modelspoke
- * channel `discoverMetadata` endpoint alongside it (cached per provider):
+ * discovery callback, src/dsh/index.ts) and the node half's
+ * /api/modelspoke `discoverMetadata` endpoint alongside it (cached per
+ * provider):
  * the detail seeds its display from committed ∪ discovered (committed wins
  * per field), and the discovery seed is DISPLAY-ONLY — the dirty baseline
  * and the commit merge key on the COMMITTED baseline (an untouched detail
@@ -113,14 +114,6 @@ import type { CSSProperties, ReactNode } from "react";
 // context); the 0.1.2-rc.1 client reorg dropped the old
 // dsh-client-runtime re-export, so name it directly from cordis.
 import type { Context as ClientContext } from "@deepseek-ai/cordis";
-// The session service face (the byte loader: `ISession.readAttachment`),
-// now owned by the session-controller client.
-import type {
-  ISession,
-  ISessions,
-} from "@deepseek-ai/dsh-api-session-controller/client";
-// The session standard-kit id (branded string), owned by dsh-session.
-import type { SessionId } from "@deepseek-ai/dsh-session/types";
 // The settings-namespace binder types; loading this module also pulls the
 // settings domain's SlotMap merge (the 'settings.section' entry) and the
 // ctx.settingsScope context merge into the program.
@@ -128,26 +121,16 @@ import type {
   SettingsScope,
   SettingsScopeSnapshot,
 } from "@deepseek-ai/dsh-client-ui-settings/client";
-// The settled tool-call node types the read_image view renders over
-// (ToolCallBlock = RunningToolCall | ToolResultNode; ToolResultNode.content
-// carries the `[text envelope, image block]` result), now in the
-// conversation client.
-import type {
-  ToolCallBlock,
-  ToolResultNode,
-} from "@deepseek-ai/dsh-client-ui-conversation/client";
-// Type-only: the ctx.connection service surface (the `connection.rpc`
-// channel the card's metadata fetch rides). The service itself is provided
-// by the host's own connection plugin (injected below); the bundle keeps no
-// runtime reference to the module.
-import type { ConnectionHandle } from "@deepseek-ai/dsh-client-connection/client";
 // Type-only: the ctx.slots service augmentation (the renderer-owned
 // SlotRegistry the card's `slots.inject`/`slots.register` calls ride).
 import type {} from "@deepseek-ai/dsh-client-ui-renderer/client";
+// Type-only: the ctx.remote service augmentation (the card's
+// `ctx.remote.llm` RPC calls ride it). Imported directly from
+// dsh-api-remotes/client: the 0.1.5 harness reorg made dsh-llm/remote a
+// typert contribution module that no longer pulls the remotes client in.
+import type {} from "@deepseek-ai/dsh-api-remotes/client";
 // Type-only: the discovered-model row the `ctx.remote.llm.discoverModels`
 // RPC returns (the node half's registered discovery callback answers it).
-// The `ctx.remote` Context augmentation rides in with dsh-api-remotes/client,
-// which the dsh-llm/remote import below pulls in.
 import type { LlmDiscoveredModel } from "@deepseek-ai/dsh-llm/types";
 // Type-only: loads the `llm` Remote-namespace augmentation into the program
 // (adds `llm` to `TypertRemoteNamespaceMap`, so `ctx.remote.llm` is typed).
@@ -216,16 +199,6 @@ import type { ModelEntry } from "../types.js";
 // materializer the card commit needs (compatForWrite's presetCompat
 // — the deep template fields materialized next to the sre pin).
 import { matchPreset } from "../presets/match.js";
-// The pure read_image tool-view helpers (attachment-ref extraction from
-// settled content, the envelope-text join, the caption, and the registration
-// gating decision).
-import {
-  imageAttachmentRefs,
-  imageCaption,
-  shouldRegisterReadImageView,
-  textBlocksOf,
-  type ReadImageAttachmentRef,
-} from "./toolview.js";
 // i18n: the locale string bundle — the typed
 // key set, the t() accessor, the resolution chain (preference → browser,
 // fallback-defensive bind), and the localized preset (catalog) descriptions.
@@ -237,71 +210,22 @@ import {
   type LocaleId,
 } from "./locales.js";
 
-/**
- * The host's keyed Tool-view slot contract, mirrored LOCALLY. The host
- * (dsh 0.1.1-rc.2) declares `tool.call.toolview` in
- * `@deepseek-ai/dsh-client-ui-tool/client` (packages/client/ui-tool/
- * src/client/contract/slots.ts:9-44): a `keyed` session-scope slot dispatched
- * by wire tool name, whose owner passes {@link ToolViewOwnerProps} and whose
- * unclaimed keys fall back to the host's generic tool row. We mirror that
- * contract here instead of importing the ui-tool client entry, because (a)
- * ui-tool is not a modelspoke dependency, and (b) its client d.ts pulls
- * `ui-conversation`/`ui-locale` type modules that are not linked in this
- * repo's node_modules — importing it would break `tsc -p tsconfig.client.json`
- * or force node_modules surgery. The mirror is EXACT against 0.1.1-rc.2; if
- * the host's `ToolCallOwnerProps` changes, this interface must follow.
- *
- * Registering a keyed entry for the (currently unclaimed) `read_image` name is
- * ADDITIVE for this tool and a takeover for a shipped one (the slot contract's
- * own words) — modelspoke owns only `read_image`, every other tool keeps its
- * host row.
- */
-interface ToolViewOwnerProps {
-  /** Tool call identity, stable across running and settled forms. */
-  callId: string;
-  /** Wire Tool name and keyed dispatch value. */
-  toolName: string;
-  /** Frozen running call or settled result node. */
-  block: ToolCallBlock;
-  /** Session workspace root for relative summaries. */
-  cwd?: string | undefined;
-  /** Host account home; POSIX home-rooted summaries display as `~`. */
-  home?: string | undefined;
-  /** Open a Tool argument path through the Host. */
-  openFile: (path: string) => void;
-  /** Inspect this call in the trajectory view when available. */
-  inspect?: (() => void) | undefined;
-}
-declare module "@deepseek-ai/dsh-client-ui-slots" {
-  interface SlotMap {
-    /** Mirrored from ui-tool client contract (see above). */
-    "tool.call.toolview": { kind: "keyed"; scope: "session"; owner: ToolViewOwnerProps };
-  }
-}
-
 export const name = "modelspoke";
 
 /**
- * Required services: the slot registry, the settings-namespace binder, and
- * and the connection service — `ctx.get("connection")` yields the host's
- * wire client (the card's `/modelspoke` metadata fetch rides its `rpc`
- * channel); `ctx.remote.llm.discoverModels` interrogates a route's
- * endpoint (the same handler the node half registers —
- * `registerModelDiscovery` in src/dsh/index.ts). `settingsScope` serves both
- * the read path and
- * the writes: its `set(field, value)` is a single-top-level-field write
+ * Required services: the slot registry and the settings-namespace binder;
+ * `ctx.remote.llm.discoverModels` interrogates a route's endpoint (the
+ * same handler the node half registers — `registerModelDiscovery` in
+ * src/dsh/index.ts). The card's `/api/modelspoke` metadata fetch is a
+ * plain same-origin POST over the host's authenticated `/api` transport
+ * (no service — see src/dsh/channel.ts for why it is a Fetch route, not
+ * an RPC channel). `settingsScope` serves both the read path and the
+ * writes: its `set(field, value)` is a single-top-level-field write
  * addressed as `path: [field]` over the settings seam's `settings.mutate`,
  * auto-fenced with the latest namespace revision
  * (docs/dsh-plugin-guidance.md §3).
  */
-// The read_image view is why "sessions" is injected: it loads its image bytes through the
-// host's session service (`sessions.binding(sessionId)?.session.readAttachment`
-// — the same path the message-image renderer uses, packages/client/ui-
-// conversation/src/client/service.ts resolveImage). The runtime provides the
-// service (`reflect.provide('sessions', …)`, packages/client/runtime/src/
-// client/sessions/service.ts:348); the typed accessor `ctx.sessions` comes
-// from the runtime's Context merge (pulled in by the type import above).
-export const inject = ["slots", "settingsScope", "connection", "sessions", "remote", "remote.llm"];
+export const inject = ["slots", "settingsScope", "remote", "remote.llm"];
 
 /**
  * The exact namespace string the node half registers:
@@ -478,6 +402,21 @@ interface CardDraft {
    * FULL_CATALOG draft that is not yet
    * materialized (unused while `entries` is null). */
   baseEntries: ModelEntry[];
+  /** The rows REMOVED from the draft in this session (name + wire id of
+   * the removed row) — the delete→re-add guard: a row the user deleted
+   * and re-added (same name for an explicit route / same id for a
+   * FULL_CATALOG route) is a FRESH row — it must not re-inherit the
+   * deleted row's committed tier through the name/id fallbacks (the
+   * stale-pin resurrection: an old committed `input: [text]` would
+   * out-shadow the live discovery and the re-added row would seed with
+   * the deleted row's stale settings). Surviving rows are never recorded
+   * here (only removals are), so a renamed row (reference-matched, or a
+   * name that no longer equals the removed one) keeps its tier; a
+   * committed duplicate name is resolved by the first match, as before.
+   * Draft-scoped: it resets with the card (Cancel / a fresh expand /
+   * post-Apply re-base), and a SAVED removal goes through the normal
+   * commit release instead. */
+  removedCommitted: Array<{ name: string; id: string }>;
   /** The per-model CONFIG drafts (the detail's
    * editable surface), keyed by the row's SLOT key (`rowKeys[i]` — a
    * colliding NAME must never share a draft between two rows; for a
@@ -515,7 +454,7 @@ interface CardDraft {
 }
 
 /**
- * The qwen3.8 fix — one row of the /modelspoke channel's
+ * The qwen3.8 fix — one row of the /api/modelspoke endpoint's
  * `discoverMetadata` response: the wire `id` (+ the endpoint-supplied
  * display `name` when it supplies one) and the model's DISCOVERED
  * canonical fields (`discoveredCanonical` — the discovery tier the
@@ -2161,13 +2100,10 @@ export function apply(ctx: ClientContext): void {
     });
   };
 
-  // The host's wire client (the connection service is injected above, so
-  // it is provided before this apply runs). `ctx.remote.llm.discoverModels`
-  // routes to the node half's registered discovery callback
-  // (`registerModelDiscovery` in src/dsh/index.ts)
-  // — the SAME interrogation the node adapter answers, so the card's silent
+  // `ctx.remote.llm.discoverModels` routes to the node half's registered
+  // discovery callback (`registerModelDiscovery` in src/dsh/index.ts) —
+  // the SAME interrogation the node adapter answers, so the card's silent
   // fetch sees the real endpoint catalog.
-  const connection = ctx.get("connection") as ConnectionHandle;
   const remote = ctx.remote;
 
   /**
@@ -2203,9 +2139,9 @@ export function apply(ctx: ClientContext): void {
     const [catalog, setCatalog] = useState<CatalogState | null>(null);
     // The qwen3.8 fix: the per-provider DISCOVERED metadata cache
     // (route name → wire id → the discovered canonical fields), from the
-    // /modelspoke channel's `discoverMetadata` fetch — re-fetched on every
-    // card expand, keyed per provider (a later card's fetch for the same
-    // provider simply replaces the entry). Display-only input to the
+    // /api/modelspoke endpoint's `discoverMetadata` fetch — re-fetched on
+    // every card expand, keyed per provider (a later card's fetch for the
+    // same provider simply replaces the entry). Display-only input to the
     // detail's effective baseline (never committed).
     const [metaByRoute, setMetaByRoute] = useState<Record<string, Record<string, DiscoveredMetadata>>>({});
     // The open card's per-model detail — the ROW NAME (the
@@ -2448,30 +2384,39 @@ export function apply(ctx: ClientContext): void {
 
     /**
      * The qwen3.8 fix — the DISCOVERED-METADATA fetch, alongside the
-     * catalog fetch on every card expand: a loopback RPC to the node
-     * half's /modelspoke channel (the loopback RPC over the host's
-     * connection service):
-     * `discoverMetadata { provider }` → `{ models: [{ id, name?,
-     * discoveredCanonical? }] }` — the per-wire-id DISCOVERED canonical
-     * fields (the discovery tier the dsh catalog view does not carry:
-     * `input`, `reasoning`, `thinkingLevelMap`, `compat`, …). The result
-     * is cached per provider ({@link DiscoveredMetadata} keyed by wire id)
-     * and re-fetched on each expand; the model detail seeds its EFFECTIVE
-     * display from it (committed ∪ discovered, committed wins).
+     * catalog fetch on every card expand: a same-origin POST to the node
+     * half's `/api/modelspoke` loopback endpoint (an exact Fetch route
+     * under the host's authenticated `/api` transport — src/dsh/channel.ts
+     * for why it is a Fetch route, not an RPC channel):
+     * `{ endpoint: "discoverMetadata", payload: { provider } }` →
+     * `{ ok, value: { models: [{ id, name?, discoveredCanonical? }] } }`
+     * — the per-wire-id DISCOVERED canonical fields (the discovery tier
+     * the dsh catalog view does not carry: `input`, `reasoning`,
+     * `thinkingLevelMap`, `compat`, …). The result is cached per provider
+     * ({@link DiscoveredMetadata} keyed by wire id) and re-fetched on each
+     * expand; the model detail seeds its EFFECTIVE display from it
+     * (committed ∪ discovered, committed wins).
      *
      * DEGRADATION (the spec's closed-error contract): an unknown provider,
-     * a fetch failure, or a malformed result leaves the provider with no
-     * metadata — the details then seed from the COMMITTED baseline only
-     * (treated like the catalog-fetch failure state: no error surface, no
-     * blocking).
+     * a fetch failure, a non-ok result, or a malformed result leaves the
+     * provider with no metadata — the details then seed from the COMMITTED
+     * baseline only (treated like the catalog-fetch failure state: no
+     * error surface, no blocking).
      */
     const fetchMetadata = (routeName: string): void => {
       void (async (): Promise<void> => {
         try {
-          const result = await connection.rpc.call("/modelspoke", "discoverMetadata", {
-            provider: routeName,
+          const response = await fetch("/api/modelspoke", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              endpoint: "discoverMetadata",
+              payload: { provider: routeName },
+            }),
           });
-          if (result.ok !== true) return;
+          if (!response.ok) return;
+          const result: unknown = await response.json();
+          if (!isPlainObject(result) || result.ok !== true) return;
           const value = result.value;
           if (!isPlainObject(value) || !Array.isArray(value.models)) return;
           const byId: Record<string, DiscoveredMetadata> = {};
@@ -2543,6 +2488,7 @@ export function apply(ctx: ClientContext): void {
         rowKeys: route.models !== null ? seedRowKeys(route.models.map((e) => e.name)) : [],
         configDrafts: {},
         pendingReset: [],
+        removedCommitted: [],
       });
       // The SILENT fetch on expand: the list area shows loading until it
       // settles; a fetch is due on EVERY expand (no polling between
@@ -2701,7 +2647,10 @@ export function apply(ctx: ClientContext): void {
      * are untouched — no row remounts, open details keep their state).
      * The delete also drops the slot's per-row draft state (a
      * config draft / pending reset keyed by the slot must not outlive the
-     * row and land on the commit of a model that is no longer served). */
+     * row and land on the commit of a model that is no longer served) —
+     * and records the removed row in `removedCommitted` (the
+     * delete→re-add guard: a same-name / same-id re-add is a fresh row
+     * that must not re-inherit the removed row's committed tier). */
     const cardRemoveModel = (rowKey: string): void => {
       setCard((c) => {
         if (c === null) return c;
@@ -2709,12 +2658,15 @@ export function apply(ctx: ClientContext): void {
           const index = c.rowKeys.indexOf(rowKey);
           if (index === -1) return c;
           const { configDrafts } = dropRowKey(c.configDrafts, rowKey);
+          const removed = c.entries[index];
+          if (removed === undefined) return c;
           return {
             ...c,
             entries: removeModelEntry(c.entries, index),
             rowKeys: c.rowKeys.filter((_, i) => i !== index),
             configDrafts,
             pendingReset: c.pendingReset.filter((k) => k !== rowKey),
+            removedCommitted: [...c.removedCommitted, { name: removed.name, id: removed.id }],
           };
         }
         const route = routesOf(snapshot.value).find((r) => r.name === c.identity);
@@ -2723,6 +2675,8 @@ export function apply(ctx: ClientContext): void {
         const index = seedRowKeys(seed.map((e) => e.name)).indexOf(rowKey);
         if (index === -1) return c;
         const { configDrafts } = dropRowKey(c.configDrafts, rowKey);
+        const removed = seed[index];
+        if (removed === undefined) return c;
         return {
           ...c,
           entries: removeModelEntry(seed, index),
@@ -2730,6 +2684,7 @@ export function apply(ctx: ClientContext): void {
           rowKeys: seedRowKeys(seed.map((e) => e.name)).filter((_, i) => i !== index),
           configDrafts,
           pendingReset: c.pendingReset.filter((k) => k !== rowKey),
+          removedCommitted: [...c.removedCommitted, { name: removed.name, id: removed.id }],
         };
       });
       if (cardDetailId === rowKey) setCardDetailId(null);
@@ -2909,6 +2864,16 @@ export function apply(ctx: ClientContext): void {
      * own per-wire-id map wins over the legacy top level). NEVER the
      * draft, never the discovery. */
     const committedSourceOf = (c: CardDraft, route: RouteRow, row: ModelEntry): Record<string, unknown> | null => {
+      // The delete→re-add guard (`removedCommitted`): a row removed from
+      // the draft in this session is a FRESH row when it comes back under
+      // the same name (explicit) / id (FULL_CATALOG) — the committed tier
+      // of the removed row must not re-associate (the stale-pin
+      // resurrection the guard exists to kill).
+      if (route.models !== null) {
+        if (c.removedCommitted.some((r) => r.name === row.name)) return null;
+      } else if (c.removedCommitted.some((r) => r.id === row.id)) {
+        return null;
+      }
       let committed: unknown;
       if (route.models !== null) {
         committed =
@@ -3336,12 +3301,22 @@ export function apply(ctx: ClientContext): void {
         if (!modelConfigDraftDirty(d) || c.pendingReset.includes(rowKey)) continue;
         const wireId = slotWireId(rowKey);
         if (wireId === null) continue; // stale slot — its row was removed
+        // The delete→re-add guard, commit side: a dirty draft whose row was
+        // removed from the draft in this session (and came back under the
+        // same name/id) merges with NO existing entry — writing a fresh
+        // entry seeded from the draft, never re-minting the removed row's
+        // committed settings (the display-side guard's commit-side twin).
+        const removed = c.removedCommitted.some(
+          (r) => r.name === displayOf(rowKey) || r.id === wireId,
+        );
         const committed =
-          c.entries === null
-            ? effectiveOverrideEntry(snapshot.value, c.identity, wireId)
-            : (c.baseEntries.find((b) => b.name === displayOf(rowKey)) ??
-               c.baseEntries.find((b) => b.id === wireId) ??
-               null);
+          removed
+            ? null
+            : c.entries === null
+              ? effectiveOverrideEntry(snapshot.value, c.identity, wireId)
+              : (c.baseEntries.find((b) => b.name === displayOf(rowKey)) ??
+                 c.baseEntries.find((b) => b.id === wireId) ??
+                 null);
         const preset = matchPreset(wireId) ?? null;
         const source: ModelConfigSource = {
           existing: isPlainObject(committed) ? committed : null,
@@ -3444,6 +3419,7 @@ export function apply(ctx: ClientContext): void {
           rowKeys: freshModels !== null ? seedRowKeys(freshModels.map((e) => e.name)) : [],
           configDrafts: {},
           pendingReset: [],
+          removedCommitted: [],
         });
       }
     };
@@ -4090,197 +4066,4 @@ export function apply(ctx: ClientContext): void {
   ctx.slots.inject("settings.plugin.item", () =>
     ctx.slots.register({ name: "settings.plugin.item", key: "modelspoke" }, ModelspokeCard),
   );
-
-  // tool view
-  //
-  // The host renders every tool call through the keyed `tool.call.toolview`
-  // slot; an UNCLAIMED key (read_image is absent from the host's TOOL_VARIANTS
-  // table, ui-tool tool-call-model.ts:38-60) falls back to the generic card,
-  // which `JSON.stringify`s every non-text content block
-  // (ui-tool tool-call-model.ts:108-118) — so read_image's image block renders
-  // as a JSON blob. This view claims the `read_image` key (gated by the
-  // `renderReadImages` section flag, default ON) and renders the settled
-  // result's image refs as bounded <img>s alongside the envelope text.
-  //
-  // Gating is a REGISTRATION gate (owner rule): `renderReadImages: false`
-  // deregisters the keyed entry so the host's own row owns the call — no
-  // double render, no dead view shadowing an upstream fix. The entry is
-  // established inside the slot declaration's lifetime (slots.inject) and
-  // re-synced live on every settings snapshot change (the shared describe
-  // mirror reloads on settings/document-updated, so an out-of-band settings.yaml
-  // edit deregisters/registers without a page reload). `slots.register` returns
-  // an idempotent disposer — the deregistration mechanism (ui-slots store.ts).
-  const sessions = ctx.sessions as ISessions | undefined;
-
-  const readImageStyle: Record<string, CSSProperties> = {
-    row: { margin: "2px 0", fontSize: 13, lineHeight: 1.4 },
-    header: { display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" },
-    title: { fontWeight: 600 },
-    path: { fontSize: 12, opacity: 0.8, wordBreak: "break-all" },
-    running: { fontSize: 12, opacity: 0.6, fontStyle: "italic" },
-    envelope: {
-      margin: "6px 0",
-      padding: "6px 8px",
-      fontSize: 12,
-      whiteSpace: "pre-wrap",
-      wordBreak: "break-word",
-      background: "rgba(127,127,127,0.1)",
-      borderRadius: 6,
-      fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-    },
-    imageList: { display: "flex", flexWrap: "wrap", gap: 10, margin: "6px 0" },
-    figure: { margin: 0 },
-    // The host's ≤240px rule is a MESSAGE-side thumbnail (an image beside
-    // message text). A tool-result image IS the row's subject, so it fits the
-    // row's available width instead of a fixed thumbnail box: standard
-    // replaced-element behavior — natural size when small (width/height auto,
-    // never upscaled), fills the column for large images (max-width 100%), and
-    // a 600px height cap for very tall ones. Aspect kept (object-fit contain —
-    // a tool result has no crop-to-fit intent).
-    img: {
-      display: "block",
-      maxWidth: "100%",
-      maxHeight: 600,
-      width: "auto",
-      height: "auto",
-      objectFit: "contain",
-      borderRadius: 6,
-    },
-    caption: { fontSize: 11, opacity: 0.7, marginTop: 2 },
-    imageStatus: { fontSize: 12, opacity: 0.7, fontStyle: "italic" },
-  };
-
-  /** The settled (or running) call's file path from its JSON arguments. */
-  const readImagePath = (block: ToolCallBlock): string | undefined => {
-    const argsRaw = "kind" in block ? block.call?.argsRaw ?? undefined : block.argsRaw;
-    if (typeof argsRaw !== "string" || argsRaw === "") return undefined;
-    try {
-      const parsed = JSON.parse(argsRaw) as Record<string, unknown>;
-      const p = parsed.file_path ?? parsed.path;
-      return typeof p === "string" && p !== "" ? p : undefined;
-    } catch {
-      return undefined;
-    }
-  };
-
-  /** One content-addressed image ref, loaded through the session service. */
-  const ReadImageFigure = ({ image, sessionId }: { image: ReadImageAttachmentRef; sessionId: SessionId }) => {
-    const [url, setUrl] = useState<string | null>(null);
-    const [failed, setFailed] = useState(false);
-    useEffect(() => {
-      let live = true;
-      let objectUrl: string | null = null;
-      setUrl(null);
-      setFailed(false);
-      const load = async (): Promise<void> => {
-        let session: ISession | undefined;
-        try {
-          session = sessions?.binding(sessionId)?.session;
-        } catch {
-          session = undefined;
-        }
-        if (session === undefined) {
-          if (live) setFailed(true);
-          return;
-        }
-        try {
-          const result = await session.readAttachment(
-            image.attachmentId as Parameters<ISession["readAttachment"]>[0],
-          );
-          if (!live) return;
-          if (result.ok !== true) {
-            setFailed(true);
-            return;
-          }
-          const bytes = result.value.data;
-          const buffer = new ArrayBuffer(bytes.byteLength);
-          new Uint8Array(buffer).set(bytes);
-          objectUrl = URL.createObjectURL(
-            new Blob([buffer], { type: image.mediaType ?? "image/png" }),
-          );
-          setUrl(objectUrl);
-        } catch {
-          if (live) setFailed(true);
-        }
-      };
-      void load();
-      return () => {
-        live = false;
-        if (objectUrl !== null) URL.revokeObjectURL(objectUrl);
-      };
-    }, [image.attachmentId, sessionId]);
-    const caption = imageCaption(image);
-    if (failed) {
-      return (
-        <div style={readImageStyle.imageStatus}>
-          {caption} — image unavailable (the envelope text above carries the metadata)
-        </div>
-      );
-    }
-    if (url === null) {
-      return <div style={readImageStyle.imageStatus}>{caption} — loading…</div>;
-    }
-    return (
-      <figure style={readImageStyle.figure}>
-        <img src={url} alt={caption} style={readImageStyle.img} />
-        <figcaption style={readImageStyle.caption}>{caption}</figcaption>
-      </figure>
-    );
-  };
-
-  /** The claimed read_image row: standard row look + envelope + images. */
-  const ReadImageView = ({ block, sessionId }: { block: ToolCallBlock; sessionId: SessionId }) => {
-    const settled = "kind" in block ? (block as ToolResultNode) : null;
-    const content = settled?.content ?? [];
-    const images = imageAttachmentRefs(content);
-    const envelope = settled === null ? "" : textBlocksOf(content);
-    const path = readImagePath(block);
-    const running = settled === null;
-    return (
-      <div style={readImageStyle.row} data-modelspoke-read-image="row">
-        <div style={readImageStyle.header}>
-          <span style={readImageStyle.title}>read_image</span>
-          {path !== undefined ? <code style={readImageStyle.path}>{path}</code> : null}
-          {running ? <span style={readImageStyle.running}>reading…</span> : null}
-        </div>
-        {envelope !== "" ? <pre style={readImageStyle.envelope}>{envelope}</pre> : null}
-        {images.length > 0 ? (
-          <div style={readImageStyle.imageList}>
-            {images.map((image, index) => (
-              <ReadImageFigure
-                key={`${image.attachmentId}:${index}`}
-                image={image}
-                sessionId={sessionId}
-              />
-            ))}
-          </div>
-        ) : null}
-      </div>
-    );
-  };
-
-  ctx.slots.inject("tool.call.toolview", () => {
-    let disposeEntry: (() => void) | null = null;
-    const sync = (): void => {
-      const want = shouldRegisterReadImageView(scope.getSnapshot().value);
-      if (want && disposeEntry === null) {
-        disposeEntry = ctx.slots.register(
-          { name: "tool.call.toolview", key: "read_image", registrant: "modelspoke" },
-          ReadImageView,
-        );
-      } else if (!want && disposeEntry !== null) {
-        disposeEntry();
-        disposeEntry = null;
-      }
-    };
-    const unsubscribe = scope.subscribe(sync);
-    sync();
-    return () => {
-      unsubscribe();
-      if (disposeEntry !== null) {
-        disposeEntry();
-        disposeEntry = null;
-      }
-    };
-  });
 }

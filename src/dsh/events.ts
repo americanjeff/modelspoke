@@ -185,8 +185,9 @@ export async function* toStreamChunks(
         yield {
           type: "tool-call-delta",
           index: event.contentIndex,
-          // `as never`: callId resolves the loaded dsh-llm's brand at runtime; never
-          // is assignable to either 0.1.1's CallId or 0.1.2's ToolCallId.
+          // `as never`: callId resolves the loaded dsh-llm's brand at runtime
+          // (the main entry does not name the type); never is assignable to
+          // the branded ToolCallId parameter.
           id: callId(captured?.id ?? (block && block.type === "toolCall" ? block.id : "")) as never,
           name: captured?.name ?? (block && block.type === "toolCall" ? block.name : undefined),
           argumentsDelta: event.delta,

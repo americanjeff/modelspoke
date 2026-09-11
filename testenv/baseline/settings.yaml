@@ -20,7 +20,7 @@ llm-pi-ai:
             omitWhenOff: true
           preserve_thinking: true
       models:
-        - id: qwen3.8-27b-6000pro
+        - id: qwen3.8-27b-sglang-dspark
           name: qwen3.8-27b
           contextWindow: 262144
           maxTokens: 65536 # sglang 400s (no clamp) when input + max_tokens > ctx; leaves ~196K for input
@@ -41,5 +41,5 @@ llm-pi-ai:
         - { id: deepseek-v4-pro:cloud }
 agent-default-model:
   provider: llama-swap
-  model: qwen3.8-27b-6000pro
+  model: qwen3.8-27b-sglang-dspark
   reasoningEffort: medium

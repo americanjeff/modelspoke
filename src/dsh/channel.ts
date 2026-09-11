@@ -1,21 +1,33 @@
 /**
- * modelspoke — dsh node half: the loopback RPC channel `/modelspoke`.
+ * modelspoke — dsh node half: the loopback metadata endpoint
+ * `POST /api/modelspoke`.
  *
- * The client↔server bridge for the discovered-catalog metadata: the
- * host Connection service is a
- * generic, bundle-open RPC-channel registry — `connection.rpc.handle`
- * registers one absolute channel prefix over the active web server, fenced
- * by `{ authority: "loopback" }` (403 off-loopback, the same fence as
- * `/api`). The browser half calls the same endpoint through
- * `ctx.connection.rpc.call` (src/dsh/client.tsx — the provider card's
+ * The client↔server bridge for the discovered-catalog metadata: an EXACT
+ * Fetch route under the host's authenticated `/api` transport, registered
+ * on the Connection service's fetch registry — `connection.fetch.register`.
+ * The route rides the host's single `/api` prefix route, which applies the
+ * Host/Origin fence and browser authentication (303-token cookie) BEFORE
+ * the bridge dispatches, so the endpoint is reachable only from the
+ * authenticated browser origin — the same reachability the logical RPC
+ * channels have, without the RPC correlation machinery. The browser half
+ * POSTs the envelope directly (src/dsh/client.tsx — the provider card's
  * model-detail seeding).
  *
- * Endpoints (channel `/modelspoke`; endpoint segments carry no hyphens —
- * the host pattern is /^[A-Za-z0-9_$.-]+$/):
+ * Why a Fetch route and not a logical RPC channel (the 0.1.5 host reorg):
+ * `connection.rpc.handle` (logical channels) throws for ALL third-party
+ * callers on 0.1.5-rc.2 — the host registers the channel's physical route
+ * through a `webServer` property read on a fiber that never injects it
+ * ("cannot get property 'webServer' without inject"; dsh bug list BUG-025)
+ * — and `rpc.intercept("/api", …)` is single-tenant (the API gateway
+ * occupies it). `fetch.register` needs neither: it only fills the host's
+ * own route map, and the shared `/api` handler serves exact Fetch routes
+ * before the gateway fallback dispatch.
  *
- * - `discoverMetadata` (payload `{ provider: string }`) →
- *     `{ ok: true, value: { models: Array<{ id: string; name?: string;
- *     discoveredCanonical?: CanonicalModelFields }> } }`
+ * Wire contract (POST `/api/modelspoke`, `content-type: application/json`):
+ *
+ * - body `{ endpoint: "discoverMetadata", payload: { provider: string } }`
+ *   → HTTP 200 `{ ok: true, value: { models: Array<{ id: string; name?:
+ *   string; discoveredCanonical?: CanonicalModelFields }> } }`
  *   The DISCOVERED catalog metadata for one route (the qwen3.8 fix): the
  *   dsh `llm.discoverModels` wire view carries only id/name/
  *   contextWindow/maxTokens (its schema strips the rest), so the DISCOVERED
@@ -25,24 +37,22 @@
  *   scan (the registry semantics: docs/design.md ("Moved from code");
  *   {@link handleDiscoverMetadata}).
  *
- * Errors are the closed RpcError union returned as the result slot (the
- * host's channel wrapper validates the result against the RpcResult
- * schema — a thrown handler becomes an opaque 500 whose body the client
- * discards, so business failures ride the result, never a throw):
- * missing/malformed inputs → `bad-request` (the message names what is
- * missing); everything unexpected (including a discovery fetch failure) →
- * `internal`.
+ * Errors: transport-level failures (wrong content type, non-JSON body,
+ * malformed envelope) are HTTP 4xx raised before the handler runs.
+ * Business failures ride the result slot as the closed RpcError union (a
+ * thrown handler would be an opaque 500 the client discards, so business
+ * failures ride the result, never a throw): missing/malformed inputs →
+ * `bad-request` (the message names what is missing); everything unexpected
+ * (including a discovery fetch failure) → `internal`.
  *
  * Activation-order safety: `connection` does not exist in tui/headless
  * profiles (no web server), so it must never be a static `inject`
- * dependency. The channel reads it lazily (`ctx.get("connection")` —
- * undefined while unprovided, cordis reflect `get`) and registers at the
- * first moment it appears: once at `apply`, plus a `{ global: true }`
- * listener on the `internal/service` event (emitted by `ctx.provide` for
- * service notifications from ANY fiber — cordis events.ts 'internal/
- * service', the loader's own activation-order idiom). When `connection`
- * never appears (headless) the channel is a silent no-op and the profile
- * boots exactly as before.
+ * dependency. The endpoint reads it through the inject seam
+ * (`ctx.inject(["connection"], …)` — the sanctioned 0.1.5 pattern: a
+ * cross-fiber `ctx.get` does not see the service) and registers at the
+ * first moment the service is available. When `connection` never appears
+ * (headless) the endpoint is a silent no-op and the profile boots exactly
+ * as before.
  */
 
 import type { Context } from "@deepseek-ai/cordis";
@@ -124,14 +134,19 @@ export function discoverMetadataRow(entry: OpenAIModelEntry): DiscoveredMetadata
 }
 
 /** Structural view of the host Connection service (node half; the full
- *  type lives in dsh-client-connection, which the node half does not import). */
+ *  types live in dsh-client-connection, which the node half does not
+ *  import). Only the exact-Fetch-route registry — the transport the
+ *  loopback endpoint uses (module header: why not `rpc.handle`). The route
+ *  PATH is the full absolute path the browser requests (the 0.1.5-rc.2
+ *  dispatch keys its route map by `new URL(request.url).pathname`). */
 interface HostConnectionLike {
-  rpc: {
-    handle(
-      channel: string,
-      handler: (endpoint: string, payload: unknown, signal: AbortSignal) => Promise<RpcResult>,
-      options: { authority: "loopback" | "trusted-host" },
-    ): unknown;
+  fetch: {
+    register(route: {
+      path: string;
+      methods: readonly string[];
+      requestBody: "buffered" | "streaming";
+      fetch: (request: Request) => Promise<Response>;
+    }): unknown;
   };
 }
 
@@ -148,40 +163,89 @@ export interface ChannelDeps {
 }
 
 /**
- * Register the `/modelspoke` loopback channel when (and only when) the
- * host Connection service is present: a silent no-op in tui/headless
+ * Register the `/api/modelspoke` loopback endpoint when (and only when)
+ * the host Connection service is present: a silent no-op in tui/headless
  * profiles, idempotent across activation orders (module header).
+ *
+ * The 0.1.5 host resolves the Connection service through the inject seam
+ * only (a cross-fiber `ctx.get` no longer sees it), so the registration
+ * rides a child fiber that waits for the service: the fiber stays pending
+ * in profiles without the service (the no-op), and the `installed` guard
+ * keeps re-arrivals idempotent.
  */
 export function installModelspokeChannel(ctx: Context, deps: ChannelDeps): void {
   let installed = false;
-  const install = (): void => {
+  ctx.inject(["connection"], (connectionCtx) => {
     if (installed) return;
-    const connection = ctx.get("connection") as HostConnectionLike | undefined;
-    if (connection === undefined) return;
+    const connection = connectionCtx.get("connection") as HostConnectionLike;
     try {
-      connection.rpc.handle(
-        "/modelspoke",
-        makeChannelHandler(deps),
-        { authority: "loopback" },
-      );
+      connection.fetch.register(makeModelspokeFetchRoute(deps));
       installed = true;
-      deps.log("modelspoke: /modelspoke loopback RPC channel registered (discoverMetadata)");
+      deps.log("modelspoke: /api/modelspoke loopback endpoint registered (discoverMetadata)");
     } catch (error) {
       deps.log(
-        `modelspoke: RPC channel registration failed: ${error instanceof Error ? error.message : String(error)}`,
+        `modelspoke: loopback endpoint registration failed: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
-  };
-  install();
-  // `connection` may be provided after this plugin's apply ran — the
-  // { global: true } listener receives service notifications from any fiber.
-  ctx.on(
-    "internal/service",
-    (name: string) => {
-      if (name === "connection") install();
+  });
+}
+
+/**
+ * The exact Fetch route that carries the endpoint over the host's
+ * authenticated `/api` transport (module header: why not `rpc.handle`).
+ * Wraps the channel handler ({@link makeChannelHandler}) in the transport
+ * envelope: the browser POSTs `{ endpoint, payload }` and receives the
+ * RpcResult as JSON (HTTP 200); transport-level failures (wrong content
+ * type, non-JSON body, malformed envelope) are 4xx raised BEFORE the
+ * handler runs. The handler's own closed result contract is untouched —
+ * it still returns `bad-request`/`internal` on the result slot; a handler
+ * THROW (a contract violation, never expected) becomes an opaque 500.
+ */
+export function makeModelspokeFetchRoute(deps: ChannelDeps): {
+  path: string;
+  methods: readonly ["POST"];
+  requestBody: "buffered";
+  fetch: (request: Request) => Promise<Response>;
+} {
+  const handler = makeChannelHandler(deps);
+  return {
+    path: "/api/modelspoke",
+    methods: ["POST"],
+    requestBody: "buffered",
+    fetch: async (request: Request): Promise<Response> => {
+      const contentType = request.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
+      if (contentType !== "application/json") {
+        return new Response("content type must be application/json", { status: 415 });
+      }
+      let envelope: unknown;
+      try {
+        envelope = await request.json();
+      } catch {
+        return new Response("body must be JSON", { status: 400 });
+      }
+      if (
+        !isPlainObject(envelope) ||
+        typeof envelope.endpoint !== "string" ||
+        envelope.payload === undefined
+      ) {
+        return new Response("body must be { endpoint: <string>, payload: <object> }", { status: 400 });
+      }
+      let result: RpcResult;
+      try {
+        result = await handler(envelope.endpoint, envelope.payload, request.signal);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return new Response(JSON.stringify({ ok: false, error: { code: "internal", message, details: {} } }), {
+          status: 500,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
     },
-    { global: true },
-  );
+  };
 }
 
 /** The channel handler over the single endpoint (see module header). */

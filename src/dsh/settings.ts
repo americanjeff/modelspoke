@@ -179,16 +179,6 @@ const route = z.object({
 export const ModelspokeConfigSchema: Schemastery<any, any> = z.object({
   routes: z.array(route).default([]),
   overrides: z.dict(overrideEntry).default({}),
-  // Client-side presentation flag — does the web GUI render the
-  // read_image tool's image, or fall back to the host's generic row? The
-  // node half's only reader is the read-image tool view's registration
-  // gate (src/dsh/toolview.ts). The schema must NAME it so the write gate
-  // accepts a section carrying it. Optional: an absent key is the lenient
-  // "absent" state the gate maps to the default (render on). No
-  // `.default()` — a materialized default would pollute settings.yaml on
-  // every section write with a field the user never wrote (the
-  // stripPhantomDefaults bug class).
-  renderReadImages: z.boolean(),
 });
 
 /**

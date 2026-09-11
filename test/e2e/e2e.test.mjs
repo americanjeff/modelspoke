@@ -24,7 +24,7 @@ const LLSWAP_BIN = process.env.E2E_LLAMA_SWAP || "llama-swap";
 
 // The e2e selectors ride on dsh's own web UI, so a dsh bump can break them
 // silently — fail loud at the boundary (filestab's same guard).
-const DSH_VERSION = "0.1.2-rc.1";
+const DSH_VERSION = "0.1.5-rc.2";
 
 // The agent loop's system prompt opens with this — the discriminator for
 // the MAIN turn's request in the fake backend's log (the session-title
@@ -752,6 +752,68 @@ async function j4_curation(home, page) {
   ok(entry.input?.includes("image") === true, "J4: the effective image input materializes");
   ok(!("compat" in entry), "J4: the deep $var compat block stays discovered (never copied from discovery)");
   eq(entry.defaultEffort, "medium", "J4: the committed defaultEffort survives the edit");
+
+  // Delete→re-add (UNSAVED) must not resurrect the removed row's committed
+  // tier: the re-added row is a FRESH row — its detail seeds from DISCOVERY
+  // (8192, not the removed row's committed 9000), and a dirty commit writes
+  // the fresh effective snapshot (discovery + the draft) — the removed
+  // row's settings are never re-minted into the entry.
+  // The card must be CLOSED and RE-OPENED first: the card that re-based on
+  // its own Apply may not carry the freshly written tier into baseEntries —
+  // the trap (the user's live scenario) is a card OPENED ON the committed
+  // state that carries the configured entry.
+  if ((await u.addModel.count()) > 0) {
+    await u.edit(name).click();
+    await until(async () => (await u.addModel.count()) === 0, { what: "card closed" });
+  }
+  await ensureCardOpen(page, u, name);
+  // Precondition: the freshly opened card's detail shows the committed tier
+  // (9000) — the stale value the delete→re-add must NOT resurrect.
+  await until(
+    async () =>
+      (await u.detail("fake-flagship").count()) > 0 ||
+      (await u.contextWindow("fake-flagship").count()) > 0,
+    { what: "pre-delete detail ready" },
+  );
+  if ((await u.detail("fake-flagship").count()) > 0) await u.detail("fake-flagship").click();
+  await until(() => u.contextWindow("fake-flagship").count(), { what: "pre-delete detail" });
+  await until(async () => (await u.contextWindow("fake-flagship").inputValue()) === "9000", {
+    timeout: 15000,
+    what: "pre-delete detail shows the committed tier (9000)",
+  });
+  if ((await u.detailOpen("fake-flagship").count()) > 0) await u.detailOpen("fake-flagship").click(); // collapse again
+  await u.removeModel("fake-flagship").click();
+  await u.addModel.click();
+  const reIdInput = page.locator('input[aria-label^="Model wire id for"]').last();
+  await until(() => reIdInput.count(), { what: "the re-added row's id input" });
+  await typeInput(page, reIdInput, "fake-flagship");
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(300);
+  // The user's re-add: the row carries the SAME NAME in the draft — that is
+  // what the committed tier's name-fallback keys on (the id-only re-add
+  // leaves the draft's name empty and never re-associates the tier).
+  const reNameInput = page.locator('input[aria-label^="Model name for"]').last();
+  await typeInput(page, reNameInput, "fake-flagship");
+  await page.waitForTimeout(300);
+  await until(() => u.detail("fake-flagship").count(), { what: "re-added detail button" });
+  await u.detail("fake-flagship").click();
+  await until(async () => (await u.contextWindow("fake-flagship").inputValue()) === "8192", {
+    timeout: 15000,
+    what: "re-added detail seeds from discovery (no committed-tier resurrection)",
+  });
+  // Make the re-added row dirty with a field the removed row's tier ALSO
+  // pins (maxTokens 2048) — the commit must write the FRESH effective
+  // snapshot (discovery's contextWindow 8192 + the draft's 555), never the
+  // removed row's committed 9000.
+  await typeInput(page, u.maxTokens("fake-flagship"), "555");
+  await u.apply.click();
+  await until(async () => {
+    const r = readSettings(home).modelspoke?.routes?.find((x) => x.name === name);
+    const e = r?.models?.find((m) => m.id === "fake-flagship");
+    return e !== undefined && e.contextWindow === 8192 && e.maxTokens === 555;
+  }, { timeout: 30000, what: "YAML flagship = the fresh effective snapshot (discovery 8192 + draft 555)" });
+  entry = readSettings(home).modelspoke.routes.find((r) => r.name === name).models.find((m) => m.id === "fake-flagship");
+  ok(entry.input?.includes("image") === true, "J4: the re-added row's image input materializes from discovery");
 
   // Re-open the detail if the last Apply collapsed it.
   const showDetails = u.detail("fake-flagship");

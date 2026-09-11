@@ -440,7 +440,7 @@ A single npm package declares all host manifest fields in `package.json`:
 ```
 
 - **dsh node half** (`.` / `dsh.bundle.patch`) — the Cordis plugin: adapter,
-  settings namespace, the loopback RPC channel, the boot hint.
+  settings namespace, the loopback metadata endpoint, the boot hint.
 - **dsh client half** (`./client` + `dsh.client`) — the web UI bundle (below).
   The host scanner auto-detects the bare package name and serves the bundle at
   `/plugins/modelspoke/client.js`; package metadata is cached per name for
@@ -598,12 +598,14 @@ surface):
   post-settlement read-back verification); live updates via the scope's
   `subscribe`; curation and per-model discovery facts via the
   `discoverModels` / `discoverMetadata` surfaces. All server reads that need
-  cross-namespace settings or local files ride the **`/modelspoke` loopback
-  RPC channel** (`ctx.connection.rpc.handle`, `{authority: "loopback"}` —
-  the host's generic, bundle-open channel registry; the connection is read
-  LAZILY — web profiles only, never a static inject — so the channel is a
-  silent no-op in tui/headless): `discoverMetadata` (per-route discovered
-  catalog facts).
+  cross-namespace settings or local files ride the **`/api/modelspoke`
+  loopback endpoint** (an exact Fetch route under the host's authenticated
+  `/api` transport, registered via `connection.fetch.register` — the 0.1.5
+  host's `rpc.handle` channel API throws for third-party plugins and
+  `rpc.intercept` is single-tenant, occupied by the API gateway; the
+  connection is read LAZILY through the inject seam — web profiles only,
+  never a static inject — so the endpoint is a silent no-op in
+  tui/headless): `discoverMetadata` (per-route discovered catalog facts).
 
 The section (the settings>Models mimic, and the settings iteration). The look is
 copied from dsh's own Settings → Models screen (markup/CSS reference:

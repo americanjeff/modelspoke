@@ -23,7 +23,7 @@ const DSH_BIN = process.env.E2E_DSH || "dsh";
 const LLSWAP_URL = process.env.E2E_LLSWAP_URL || "http://127.0.0.1:8080/v1";
 
 // The shots ride on dsh's own web UI, so a dsh bump can change them — pin.
-const DSH_VERSION = "0.1.1-rc.2";
+const DSH_VERSION = "0.1.5-rc.2";
 
 const PROVIDER_NAME = "llama-swap";
 const SCREENSHOT_DIR = path.join(REPO_ROOT, "docs", "screenshots");

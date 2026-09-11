@@ -616,8 +616,8 @@ export function foldLegacyOverrides(section: unknown): FoldResult {
 }
 
 // The BYTE-PRESERVING route writer (the card-commit's per-route half; the
-// whole-section glue — the legacy top-level fold + the `renderReadImages`
-// mirror carry — stays with the section writers, src/dsh/channel.ts):
+// whole-section glue — the legacy top-level fold — runs in the client's
+// commit path, src/dsh/client.tsx):
 //
 // - **EXPLICIT** route (`models: ModelEntry[]`): write `models` = the
 //   entries — `name` / `id` (and a non-empty `defaultEffort`) leading, the

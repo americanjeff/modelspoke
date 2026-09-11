@@ -30,11 +30,11 @@ dsh custom provider functionality doesn't afford any way to set reasoning effort
 
 **Image input**
 
-Models with multimodal capabilities are great but if you add them via the dsh custom provider setup that functionality is not available. Modelspoke can discover image input capability or allow you to specify it. It also includes a fix for the lack of upstream support for inline images in session chat.
+Models with multimodal capabilities are great but if you add them via the dsh custom provider setup that functionality is not available. Modelspoke can discover image input capability or allow you to specify it. dsh 0.1.5 renders the `read_image` tool's inline results in session chat natively — modelspoke's role is surfacing which models accept images at all.
 
 ## Installation & setup
 
-Prerequisite: dsh **0.1.2** (verified against 0.1.2-rc.1) with the
+Prerequisite: dsh **0.1.5** (verified against 0.1.5-rc.2) with the
 `dsh plugin` command.
 
 1. **Install:** dsh installs plugins with a tool called pnpm. If you don't

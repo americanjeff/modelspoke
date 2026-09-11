@@ -7,9 +7,7 @@
  * aria-labels (they are user-facing for screen readers), placeholders,
  * the status-dot hover detail, the commit errors, and the read-only
  * "preserved from settings.yaml" line — plus the localized preset
- * (catalog) description accessor. The read_image tool view
- * (`tool.call.toolview`) is a separate surface (not the settings section)
- * and is intentionally NOT part of this bundle.
+ * (catalog) description accessor.
  *
  * FRAMEWORK-NEUTRAL ON PURPOSE: no react, no DOM. The browser-language
  * fallback reads `navigator.language` in the client (src/dsh/client.tsx)

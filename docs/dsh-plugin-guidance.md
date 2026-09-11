@@ -312,40 +312,55 @@ For modelspoke the relevant ones:
 | `settings.section` | A new row in the Settings nav opening a full page | The full-page section home (the in-box sections' choice); the nav is auto-projected from the section ledger — zero shell edits. modelspoke moved its surface into the plugin card above. |
 | `settings.plugins.tab`, `settings.general.item`, `settings.trigger/header/action/close`, `shell.overlay`, `sidebar.footer.action` | Tabs / rows / chrome / overlays | Open but less fitting; there is **no third-party top-level nav seat** — Settings is the supported home. |
 
-### 2.3 The loopback RPC-channel bridge (client ↔ its own server code)
+### 2.3 The loopback endpoint bridge (client ↔ its own server code)
 
 The big question — can a plugin's *browser* code invoke its *own*
-server-side logic? **Yes: the Connection package ships a generic,
-bundle-open RPC-channel registry** (re-verified on 0.1.2-rc.1 —
-modelspoke's `discoverMetadata` e2e rides it):
+server-side logic? **Yes — as an exact Fetch route under the host's
+authenticated `/api` transport** (verified on 0.1.5-rc.2 — modelspoke's
+`discoverMetadata` e2e rides it):
 
 ```
 host (dsh process, server apply):
-  ctx.get('connection')?.rpc.handle(
-    '/modelspoke',                          // channel: /^\/[A-Za-z0-9._~-]+$/;
-    async (endpoint, payload, signal) => {…},// '/api' is reserved
-    { authority: 'loopback' }               // trust fence: loopback only
-  )                                         // ⇒ HTTP route /modelspoke/<endpoint>,
-                                            //   403 for off-loopback origins
+  ctx.inject(['connection'], (cc) =>       // 0.1.5: the service is visible
+    cc.get('connection').fetch.register({  //   through the inject seam only
+      path: '/api/modelspoke',             //   (a cross-fiber ctx.get
+      methods: ['POST'],                   //   does not see it)
+      requestBody: 'buffered',
+      fetch: async (req) => …Response…
+    })                                     // fence + browser auth are applied
+                                           //   by the /api route BEFORE the
+                                           //   bridge dispatches
 browser (client apply):
-  ctx.get('connection').rpc.call('/modelspoke', 'discoverMetadata', { provider: '…' })
+  fetch('/api/modelspoke', { method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ endpoint: 'discoverMetadata', payload: {…} }) })
 ```
 
-Properties that make this the right tool: **bundle-open by design** (any
-plugin registers one absolute channel prefix + trust policy — cross-package
-use is the intended pattern); **trust-fenced for free** (`authority:
-'loopback'` applies the same fence as `/api`; `trusted-host` accepts the
-deployment's trusted hosts); **lifecycle-safe** (the registration is a fiber
-effect — the channel disappears with the composition).
+Why a Fetch route and not a logical RPC channel: on 0.1.5-rc.2
+`connection.rpc.handle` **throws for all third-party callers** — the host
+registers the channel's physical route through a `webServer` property read
+on a fiber that never injects it ("cannot get property 'webServer' without
+inject"; dsh bug list BUG-025) — and `rpc.intercept('/api', …)` is
+single-tenant (the API gateway occupies it). `fetch.register` needs
+neither: it only fills the host's own route map, and the shared `/api`
+handler serves exact Fetch routes before the gateway fallback dispatch.
+
+Properties that make this the right tool: **authenticated for free** (the
+route rides the `/api` prefix route, which applies the Host/Origin fence +
+the 303-token browser cookie — reachable only from the authenticated
+browser origin); **lifecycle-safe** (the registration is a fiber effect —
+the route disappears with the composition).
 
 Server-side availability gotcha: `connection` is a sibling service that
 exists **only in the web composition**. Never add it to the plugin's static
-`inject` (the plugin must still boot dormant in tui/headless profiles) — read
-`ctx.get('connection')` at apply time and additionally subscribe to the
-`internal/service` event (`{ global: true }`) so the channel registers
-whichever order the two fibers activate, guarded idempotently. The endpoint
-segment grammar is `[A-Za-z0-9_$.-]` — **no hyphens** (`discoverMetadata`,
-not `discover-metadata`).
+`inject` (the plugin must still boot dormant in tui/headless profiles) —
+register through `ctx.inject(['connection'], …)` so the registration rides
+a child fiber that waits for the service (a silent no-op when it never
+appears), guarded idempotently. The route PATH is the full absolute path
+the browser requests — the 0.1.5-rc.2 dispatch keys its route map by
+`new URL(request.url).pathname`, so the type-docstring's "path below /api"
+convention does not hold in practice (verified empirically: only the full
+`/api/…` key matches).
 
 **The shared remote surface** (typed `ctx.remote`) is callable from any
 client bundle and covers the rest. 0.1.2 removed the 0.1.1

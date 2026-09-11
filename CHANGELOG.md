@@ -4,6 +4,34 @@ Coarse and consumer-facing — the kind of thing a dsh user or a `./lib`
 consumer can act on. Build-internal work (tests, comments, docs) does not
 belong here.
 
+## 0.2.0 — 2026-09-11
+
+- **The host requirement is now dsh 0.1.5** (breaking) — modelspoke loads on
+  dsh 0.1.5 and newer only (verified against 0.1.5-rc.2); dsh 0.1.1 and 0.1.2
+  hosts are no longer supported.
+- **The custom `read_image` view is retired** — dsh 0.1.5 ships its own
+  `read_image` row (read-family chrome, collapsed-by-default card,
+  session-authorized image loader, PTC-nested coverage) that modelspoke's
+  earlier view only shadowed. The `renderReadImages` setting is gone: if you
+  ever set it, delete that line from your `modelspoke:` section.
+- **The loopback metadata bridge is a plain HTTP endpoint now** (internal) —
+  the model-detail metadata (context window, max tokens, image input,
+  thinking levels) no longer rides the host's logical RPC channel
+  (`connection.rpc.handle`); on dsh 0.1.5 that API throws for third-party
+  plugins (the host reads `webServer` on a fiber that never injects it —
+  tracked on the dsh bug list as BUG-025). It now rides an exact Fetch
+  route under the host's authenticated `/api` transport
+  (`POST /api/modelspoke`), same reachability, no correlation machinery.
+- **Fixed: deleting a model row in the card and re-adding the same model
+  resurrected the deleted row's saved settings** — the re-added row is a
+  fresh row, but the card's committed-configuration lookup keyed the
+  deleted row's settings (for example a stale `input: [text]` that
+  out-shadowed the live discovery's image-input support) onto the re-add by
+  name / wire id. A within-session removal now blocks that re-association:
+  the re-added row seeds from discovery as if it were never configured, and
+  an edited re-add commits a fresh entry instead of re-minting the deleted
+  row's settings.
+
 ## 0.1.4 — 2026-09-06
 
 - **The web UI now works under dsh 0.1.2** — the browser half (the
