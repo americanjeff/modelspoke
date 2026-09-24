@@ -13,14 +13,19 @@
  *   rebuilds the message from durable dsh content: text/reasoning/tool-call
  *   blocks, zero usage, `stop` (pi-ai history conversion ignores usage and
  *   stopReason; content is what the wire carries).
- * - tool results: dsh `ToolResultMessage` (role `user`, one `tool-result`
- *   block) → pi-ai `ToolResultMessage`; the `toolName` pi-ai requires is
+ * - tool results: the 0.1.7 first-class tool-role message (`role: 'tool'`,
+ *   `toolCallId`, `content`, `isError`) → pi-ai `ToolResultMessage`; the
+ *   `toolName` pi-ai requires is
  *   recovered from the preceding assistant tool call with the matching id
  *   (the reference adapter's recovery rule). Image blocks inside the result
  *   resolve to `ImageContent` — pi-ai's openai-completions serializer lifts
  *   them into a synthesized `user` message when the model declares image
  *   input (verified in the dsh-bundled pi-ai 0.82.1 and the 0.84.2 dev
  *   dependency).
+ * - system: `options.system` wins; otherwise a LEADING `system` history
+ *   message supplies the prompt (the loop-built request shape) and the rest
+ *   converts (the reference adapter's split rule). `developer` messages and
+ *   tool-change blocks are rejected like the reference adapter.
  *
  * GUARD INVARIANT: `toPiContext` never hard-fails a turn on DURABLE history
  *   content. An image that cannot be delivered — store unmounted, per-image
@@ -43,12 +48,14 @@ import type {
   Tool as PiTool,
   Usage as PiUsage,
 } from "@earendil-works/pi-ai";
-import type {
-  ContentBlock,
-  GenerateOptions,
-  ImageBlock,
-  Message,
-  ToolSchema,
+import {
+  LlmError,
+  type ContentBlock,
+  type GenerateOptions,
+  type ImageBlock,
+  type Message,
+  type RequestMessage,
+  type ToolSchema,
 } from "@deepseek-ai/dsh-llm";
 import { fromReplayEnvelope } from "./replay.js";
 
@@ -188,9 +195,20 @@ function neutralAssistant(message: Message, options: GenerateOptions): PiAssista
         // (guard invariant).
         content.push({ type: "text", text: ASSISTANT_IMAGE_TEXT });
         break;
-      case "tool-result":
-        // Never appears in assistant content; ignore defensively.
+      case "file":
+        // File blocks are projected to deterministic handle text by request
+        // assembly before the adapter sees them; a raw one is a durability
+        // defect — project, never throw (guard invariant).
+        content.push({ type: "text", text: "[file reference omitted: projected by request assembly before adapter dispatch]" });
         break;
+      case "tool-addition":
+      case "tool-removal":
+        // Reserved for developer-role messages (Session V4 tool changes);
+        // the reference adapter rejects them in user/assistant content.
+        throw new LlmError(
+          "modelspoke: tool-change blocks require the developer role (pi-ai has no projection for them)",
+          "UNSUPPORTED_CONTENT",
+        );
     }
   }
   const source = message.source;
@@ -208,37 +226,42 @@ function neutralAssistant(message: Message, options: GenerateOptions): PiAssista
   };
 }
 
-/** One user-role message (or the tool-result specialization) → pi-ai. */
-async function convertUser(message: Message, options: GenerateOptions, deps: ToPiContextDeps | undefined): Promise<PiMessage> {
-  if (message.content.length === 1 && message.content[0]?.type === "tool-result") {
-    const result = message.content[0];
-    const toolCallId = String(result.toolCallId);
-    // Recover the tool name from the preceding assistant tool call (the
-    // reference adapter's rule): scan backward FROM THE TOOL RESULT'S OWN
-    // POSITION (not from the end of the array — the result is normally the
-    // last or second-to-last message, so an end-anchored scan breaks on the
-    // first iteration and never sees history).
-    let toolName = "tool";
-    const at = options.messages.indexOf(message);
-    for (let i = at - 1; i >= 0; i--) {
-      const prior = options.messages[i];
-      if (prior?.role !== "assistant") continue;
-      const match = prior.content.find((b) => b.type === "tool-call" && String(b.id) === toolCallId);
-      if (match && match.type === "tool-call") {
-        toolName = match.name;
-        break;
-      }
+/** One tool-role message (0.1.7) → pi-ai toolResult. */
+async function convertTool(
+  message: Extract<Message, { role: "tool" }>,
+  options: GenerateOptions,
+  deps: ToPiContextDeps | undefined,
+): Promise<PiMessage> {
+  const toolCallId = String(message.toolCallId);
+  // Recover the tool name from the preceding assistant tool call (the
+  // reference adapter's rule): scan backward FROM THE TOOL RESULT'S OWN
+  // POSITION (not from the end of the array — the result is normally the
+  // last or second-to-last message, so an end-anchored scan breaks on the
+  // first iteration and never sees history).
+  let toolName = "tool";
+  const at = options.messages.indexOf(message as RequestMessage);
+  for (let i = at - 1; i >= 0; i--) {
+    const prior = options.messages[i];
+    if (prior?.role !== "assistant") continue;
+    const match = prior.content.find((b) => b.type === "tool-call" && String(b.id) === toolCallId);
+    if (match && match.type === "tool-call") {
+      toolName = match.name;
+      break;
     }
-    const content = await imageAwareBlocks(result.content, deps);
-    return {
-      role: "toolResult",
-      toolCallId,
-      toolName,
-      content,
-      isError: result.isError === true,
-      timestamp: 0,
-    };
   }
+  const content = await imageAwareBlocks(message.content, deps);
+  return {
+    role: "toolResult",
+    toolCallId,
+    toolName,
+    content,
+    isError: message.isError === true,
+    timestamp: 0,
+  };
+}
+
+/** One user-role message (or identity-free one-shot input) → pi-ai. */
+function convertUser(message: RequestMessage, deps: ToPiContextDeps | undefined): Promise<PiMessage> {
   // Text-only user messages keep the historical single-joined-string shape
   // (byte-identical wire output for image-free history).
   if (!message.content.some(blockHasImage)) {
@@ -246,10 +269,10 @@ async function convertUser(message: Message, options: GenerateOptions, deps: ToP
       .filter((b): b is Extract<ContentBlock, { type: "text" }> => b.type === "text")
       .map((b) => b.text)
       .join("\n");
-    return { role: "user", content: text, timestamp: 0 };
+    return Promise.resolve({ role: "user", content: text, timestamp: 0 });
   }
-  const content = await imageAwareBlocks(message.content, deps);
-  return { role: "user", content, timestamp: 0 };
+  const content = imageAwareBlocks(message.content, deps);
+  return content.then((blocks) => ({ role: "user", content: blocks, timestamp: 0 }));
 }
 
 /**
@@ -261,18 +284,41 @@ async function convertUser(message: Message, options: GenerateOptions, deps: ToP
  * history defect, and propagates.
  */
 export async function toPiContext(options: GenerateOptions, deps?: ToPiContextDeps): Promise<PiContext> {
+  // The reference adapter's split rule: `options.system` wins when defined;
+  // otherwise a LEADING `system` history message supplies the prompt and the
+  // rest converts (pi-ai carries no system role in its message union).
+  const [first, ...rest] = options.messages;
+  const systemPrompt =
+    options.system !== undefined
+      ? options.system
+      : first?.role === "system"
+        ? (() => {
+            const text = first.content
+              .filter((b): b is Extract<ContentBlock, { type: "text" }> => b.type === "text")
+              .map((b) => b.text)
+              .join("");
+            return text.length > 0 ? text : undefined;
+          })()
+        : undefined;
+  const history = first?.role === "system" && options.system === undefined ? rest : options.messages;
   const messages: PiMessage[] = [];
-  for (const message of options.messages) {
+  for (const message of history) {
     if (message.role === "assistant") {
       const source = message.source;
       const replay = source.kind === "model" ? fromReplayEnvelope(source.replayState) : undefined;
       messages.push(replay !== undefined ? replay : neutralAssistant(message, options));
+    } else if (message.role === "tool") {
+      messages.push(await convertTool(message, options, deps));
+    } else if (message.role === "developer") {
+      // Session V4 tool-change events (tool-addition/-removal) — no pi-ai
+      // projection exists yet (the reference adapter rejects them too).
+      throw new LlmError("modelspoke: developer messages are not supported yet", "UNSUPPORTED_CONTENT");
     } else {
-      messages.push(await convertUser(message, options, deps));
+      messages.push(await convertUser(message, deps));
     }
   }
   return {
-    ...options.system === undefined ? {} : { systemPrompt: options.system },
+    ...systemPrompt === undefined ? {} : { systemPrompt },
     messages,
     ...options.tools === undefined
       ? {}

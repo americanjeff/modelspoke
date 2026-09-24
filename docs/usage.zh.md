@@ -40,7 +40,7 @@ README 里的安装步骤能让你拿到一个可用的提供方；这篇文档�
 - **名称** — 提供方的身份键。改名会带着它的模型和覆盖一起走。
 - **Base URL** — OpenAI 兼容端点，如 `http://127.0.0.1:8080/v1`。
 - **API 密钥环境变量名** — 存放密钥的*环境变量*的*名字*。modelspoke
-  只从 `process.env` 读取；密钥的*值*绝不写入 `settings.yaml`。无密钥的
+  只从 `process.env` 读取；密钥的*值*绝不写入配置。无密钥的
   本地服务器可省略 — 此时不发送认证头。
 - **状态点** — 绿色：最近一次目录拉取成功。红色：拉取失败（悬停看原因）。
   灰色：尚未检查。
@@ -79,9 +79,9 @@ README 里的安装步骤能让你拿到一个可用的提供方；这篇文档�
   拒绝，绝不静默钳制。
 
 深层模板契约字段（`compat`：`thinkingFormat`、`chatTemplateKwargs` 的
-`$var` 绑定）刻意**不在** UI 里：它们是只读的，在 `settings.yaml` 里
-手工编辑，并逐字节保留通过每次 UI 写入 — 那里的一次部分写入会替换掉
-模板的思考绑定，中途弄坏模型。
+`$var` 绑定）刻意**不在** UI 里：它们是只读的，在 profile 的
+`cordis.patch.yml` 里手工编辑（见[下面](#配置文件)），并逐字节保留通过每次
+UI 写入 — 那里的一次部分写入会替换掉模板的思考绑定，中途弄坏模型。
 
 详情上的**重置**把该模型的配置退回更低的层；模型留在服务列表里。
 
@@ -104,9 +104,8 @@ README 里的安装步骤能让你拿到一个可用的提供方；这篇文档�
   线上。
 - 你在输入框粘贴的图像以 `image_url` 部分走线。
 
-在 web UI 里，`read_image` 的结果默认渲染为真实的内联图像（连同工具的
-文本）；`modelspoke:` 段里的 `renderReadImages` 设置关掉它，届时该行
-交回 dsh 的通用工具渲染。
+在 web UI 里，dsh 原生把 `read_image` 的结果渲染为真实的内联图像（连同
+工具的文本）— modelspoke 的角色是上面的能力门，决定模型是否被提供该工具。
 
 **已知限制。** 目前还没有请求预算管理：在很长的线程上，
 `input + max_tokens` 可能超过模型上下文，服务器返回 400（sglang 不
@@ -115,33 +114,40 @@ README 里的安装步骤能让你拿到一个可用的提供方；这篇文档�
 
 ## 配置文件
 
-UI 写入的一切都住在 `~/.dsh/settings.yaml` 的 `modelspoke:` 段里，你也
-可以同样地手工编辑 — dsh 监视该文件，改动实时生效：
+UI 写入的一切都住在 **profile 的 `cordis.patch.yml` 里的 `modelspoke`
+条目**（如 `~/.dsh/profiles/web/cordis.patch.yml` — 每个 profile 一个文件；
+该条目与任何其他 patch 条目一起位于顶层 YAML 数组里）。你可以同样地手工
+编辑 — dsh 监视该文件，改动实时生效：
 
 ```yaml
-modelspoke:
-  routes:
-    - name: llama-swap              # 提供方键（唯一）
-      baseURL: http://127.0.0.1:8080/v1
-      apiKeyEnv: LLAMA_SWAP_API_KEY # 可选 — 变量名，不是变量的值
-      models:                       # 服务集合；在列 = 在服务
-        - name: qwen3.8-27b         # 身份（agent 对它的称呼）
-          id: qwen3.8-27b-6000pro   # wire id（走线的 id）
-          defaultEffort: medium     # 可选
-          contextWindow: 262144     # 任何规范字段，当你设置时
-          maxTokens: 65536
-          input: [text, image]
-          thinkingLevelMap:         # 级别 → 模型取值 的映射
-            off: low
-            low: low
-            medium: medium
-            xhigh: xhigh
-      overrides:                    # 每提供方，精确 wire id → 字段值
-        qwen3.8-27b-mtp: { contextWindow: 32768 }
-  overrides:                        # 遗留的顶层形状 — 仍然读取；
-    some-wire-id: { maxTokens: 4096 }  # 同 id 条目在提供方上逐字段获胜
-  renderReadImages: true            # read_image 内联渲染（仅 web UI）
+- id: modelspoke
+  name: modelspoke
+  config:
+    routes:
+      - name: llama-swap              # 提供方键（唯一）
+        baseURL: http://127.0.0.1:8080/v1
+        apiKeyEnv: LLAMA_SWAP_API_KEY # 可选 — 变量名，不是变量的值
+        models:                       # 服务集合；在列 = 在服务
+          - name: qwen3.8-27b         # 身份（agent 对它的称呼）
+            id: qwen3.8-27b-6000pro   # wire id（走线的 id）
+            defaultEffort: medium     # 可选
+            contextWindow: 262144     # 任何规范字段，当你设置时
+            maxTokens: 65536
+            input: [text, image]
+            thinkingLevelMap:         # 级别 → 模型取值 的映射
+              off: low
+              low: low
+              medium: medium
+              xhigh: xhigh
+        overrides:                    # 每提供方，精确 wire id → 字段值
+          qwen3.8-27b-mtp: { contextWindow: 32768 }
+    overrides:                        # 遗留的顶层形状 — 仍然读取；
+      some-wire-id: { maxTokens: 4096 }  # 同 id 条目在提供方上逐字段获胜
 ```
+
+旧版 dsh 留下的 `settings.yaml` 会在 0.1.7 首次启动时被一次性导入（其
+`modelspoke:` 段落进这个条目，然后该文件被重命名为
+`settings.yaml.imported`），所以已有配置会自动迁移。
 
 没有 `models:` 列表的提供方提供其**完整目录**（按发现）；对这类提供方
 的第一次编辑（删行、加模型、改字段）会用拉取的目录把列表物化出来，
@@ -149,10 +155,10 @@ modelspoke:
 
 ## 什么实时生效，什么需要重启
 
-- **内容变更** — `settings.yaml` 里的一切，包括整个 `modelspoke:` 段 —
-  被监视并实时生效。
+- **内容变更** — profile 的 `cordis.patch.yml` 里的一切，包括整个
+  `modelspoke` 条目 — 被监视并实时生效。
 - **（反）安装包** — dsh 按进程生命周期缓存包元数据，所以在 profile 里
   添加或移除 modelspoke 之后重启一次。其他什么都不需要。
-- **tui/headless profile** — 设置页和引导步骤是 web 界面；在
-  tui/headless 里插件以完全相同的方式提供模型，`settings.yaml` 段（加上
-  尚无任何提供方时首次启动的日志提示）就是操作界面。
+- **tui/headless profile** — Plugins 页的设置卡片是 web 界面；在
+  tui/headless 里插件以完全相同的方式提供模型，profile 的 `modelspoke`
+  条目（加上尚无任何提供方时首次启动的日志提示）就是操作界面。

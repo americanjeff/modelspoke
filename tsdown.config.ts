@@ -30,11 +30,12 @@ const ID = "modelspoke";
 
 /**
  * Baseline module-table rows a client bundle may require without declaring
- * them — PLATFORM_MODULES from the 0.1.2-rc.1 web shell (SRC
+ * them — PLATFORM_MODULES from the 0.1.7 web shell (SRC
  * packages/client/web/src/platform.ts; PRELOADED_CLIENT_EXTERNALS is empty
- * in that release). The bundle's own runtime requires stay within this set
+ * in that line). The bundle's own runtime requires stay within this set
  * (today: react + react/jsx-runtime only — every dsh import is type-only
- * and erased); anything else MUST inline into the bundle.
+ * and erased); anything else MUST inline into the bundle. The 0.1.7-rc.1
+ * shell answers this set — e2e-verified against it.
  */
 const EXTERNALS = new Set([
   "react",

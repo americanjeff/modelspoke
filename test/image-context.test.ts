@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { ToolCallId, createMessage, createUserMessage } from "@deepseek-ai/dsh-llm";
+import { ToolCallId, createMessage, createToolResultMessage, createUserMessage } from "@deepseek-ai/dsh-llm";
 import type { GenerateOptions, ImageBlock, Message } from "@deepseek-ai/dsh-llm";
 import {
   ASSISTANT_IMAGE_TEXT,
@@ -99,16 +99,10 @@ describe("toPiContext — image resolution", () => {
       content: [{ type: "tool-call", id: callId, name: "read_image", arguments: '{"file_path":"/x.png"}' }],
       source: { kind: "model", provider: "unit", model: "unit-model" },
     });
-    const toolResult = createMessage({
-      role: "user",
-      content: [
-        {
-          type: "tool-result",
-          toolCallId: callId,
-          content: [{ type: "text", text: "path: /x.png" }, imageBlock()],
-        },
-      ],
-      source: { kind: "tool", callId },
+    const toolResult = createToolResultMessage({
+      callId,
+      content: [{ type: "text", text: "path: /x.png" }, imageBlock()],
+      isError: false,
     });
     const ctx = await toPiContext(opts([assistantCall, toolResult]), { attachments: store });
     expect(ctx.messages).toHaveLength(2);
@@ -130,10 +124,10 @@ describe("toPiContext — image resolution", () => {
       content: [{ type: "tool-call", id: callId, name: "read_image", arguments: "{}" }],
       source: { kind: "model", provider: "unit", model: "unit-model" },
     });
-    const toolResult = createMessage({
-      role: "user",
-      content: [{ type: "tool-result", toolCallId: callId, content: [{ type: "text", text: "42" }] }],
-      source: { kind: "tool", callId },
+    const toolResult = createToolResultMessage({
+      callId,
+      content: [{ type: "text", text: "42" }],
+      isError: false,
     });
     const nextUser = createUserMessage({ content: [{ type: "text", text: "and now?" }], source: { kind: "user" } });
     const ctx = await toPiContext(opts([assistantCall, toolResult, nextUser]));
@@ -176,16 +170,10 @@ describe("toPiContext — guard invariant (never fail a turn on durable history)
 
   it("tool-result image without a store → placeholder INSIDE the tool result, no throw", async () => {
     const callId = ToolCallId("call-img-2");
-    const toolResult = createMessage({
-      role: "user",
-      content: [
-        {
-          type: "tool-result",
-          toolCallId: callId,
-          content: [{ type: "text", text: "path: /y.png" }, imageBlock()],
-        },
-      ],
-      source: { kind: "tool", callId },
+    const toolResult = createToolResultMessage({
+      callId,
+      content: [{ type: "text", text: "path: /y.png" }, imageBlock()],
+      isError: false,
     });
     const ctx = await toPiContext(opts([toolResult]));
     const result = ctx.messages[0]!;

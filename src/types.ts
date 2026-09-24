@@ -273,8 +273,10 @@ export interface ModelspokeRoute {
 }
 
 /**
- * The plugin-owned `modelspoke:` settings namespace: the `modelspoke:`
- * section of `~/.dsh/settings.yaml`.
+ * The plugin-owned `modelspoke:` settings namespace: the `modelspoke`
+ * entry of the active profile's `cordis.patch.yml` (dsh 0.1.7; on the
+ * 0.1.5/0.1.6 hosts it was the `modelspoke:` section of the DSH_HOME-root
+ * `settings.yaml`).
  *
  * DUAL SHAPE: per-model configuration lives PER ROUTE —
  * `routes[].overrides` (see {@link ModelspokeRoute.legacyOverrides}) — and the

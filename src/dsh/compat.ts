@@ -1,6 +1,5 @@
 /**
- * Access to the dsh-llm / dsh-settings install-seam symbols, host floor
- * dsh 0.1.5 (peer ranges: `^0.1.5-rc.2`).
+ * Access to the dsh-llm install-seam symbols, host floor dsh 0.1.7.
  *
  * Why the namespace indirection on `callId`: the main dsh-llm type entry
  * (`lib/types/index.d.ts`) does not declare the `ToolCallId` brand — the
@@ -10,82 +9,28 @@
  * export"); a namespace import has no per-name check — it yields whatever
  * the loaded copy actually exports — so we import the whole module and
  * resolve the brand at runtime (type-erased `Record<string, unknown>`).
- *
- * The settings seam is the 0.1.2+ shape exclusively: the namespace methods
- * take a plain lowercase-hyphenated string and brand it internally (no
- * `settingsNamespace` export), and the section install is a
- * `SettingsProvider.installSection` reached through the scoped
- * `ctx.inject(["settings"], …)` the host requires. The 0.1.1 free-function
- * shapes (`CallId`, `settingsNamespace(name)`, `installSettingsSection`)
- * are gone — the host floor retired the detection branches that covered
- * them.
  */
 
 import * as dshLlm from "@deepseek-ai/dsh-llm";
-import type { SettingsNamespace } from "@deepseek-ai/dsh-settings";
 
 const llm = dshLlm as Record<string, unknown>;
 
 /**
- * The loaded dsh-llm's tool-call-id brand constructor (`ToolCallId` — the
- * 0.1.2+ name). The returned value carries the loaded copy's brand; the
- * brand is a nominal type the main entry does not name, so call sites cast
- * the result (`as never` — never is assignable to the branded parameter,
- * and the runtime value is already correctly branded).
+ * The loaded dsh-llm's tool-call-id brand constructor (`ToolCallId`). The
+ * returned value carries the loaded copy's brand; the brand is a nominal
+ * type the main entry does not name, so call sites cast the result (`as
+ * never` — never is assignable to the branded parameter, and the runtime
+ * value is already correctly branded).
  */
 export const callId: (id: string) => unknown = (() => {
   const brand = llm.ToolCallId;
   if (typeof brand !== "function") {
     throw new Error(
-      "modelspoke: the loaded dsh-llm does not export the `ToolCallId` brand (host is below the 0.1.5 floor)",
+      "modelspoke: the loaded dsh-llm does not export the `ToolCallId` brand (host is below the 0.1.7 floor)",
     );
   }
   return brand as (id: string) => unknown;
 })();
-
-/**
- * dsh-settings namespace handle. The namespace methods take a plain
- * lowercase-hyphenated string and brand it internally; at runtime the
- * branded value IS the string, so the identity mapping is the handle.
- */
-export const settingsNamespace: (name: string) => SettingsNamespace = (
-  name: string,
-): SettingsNamespace => name as unknown as SettingsNamespace;
-
-/**
- * Install the optional-settings consumer wiring for the `modelspoke:`
- * section: the `SettingsProvider.installSection` method, reached through
- * the scoped `ctx.inject(["settings"], …)` the host requires (a bare
- * `ctx.settings` read is refused "without inject"). The hooks shape
- * ({ setSource, onChange, validate? }) is the host's.
- */
-export function installSettingsSection(
-  ctx: unknown,
-  ns: SettingsNamespace,
-  schema: unknown,
-  entry: unknown,
-  // Structural (not the dsh-settings type) so the call site's params get a
-  // contextual type without importing a version-specific symbol.
-  hooks: {
-    setSource: (current: () => unknown) => void;
-    onChange: () => void;
-    validate?: (value: unknown) => void;
-  },
-): void {
-  const inject = (ctx as { inject?: (ids: readonly string[], cb: (settingsCtx: unknown) => void) => void } | null)?.inject;
-  if (typeof inject === "function") {
-    inject(["settings"], (settingsCtx: unknown) => {
-      const provider = (settingsCtx as { settings?: { installSection?: unknown } } | null)?.settings;
-      if (provider && typeof provider.installSection === "function") {
-        (provider.installSection as (...args: unknown[]) => void)(ctx, ns, schema, entry, hooks);
-      }
-    });
-    return;
-  }
-  throw new Error(
-    "modelspoke: no dsh-settings install seam (the loaded host does not provide ctx.inject(['settings']) — below the 0.1.5 floor)",
-  );
-}
 
 /**
  * Deep equality for the plain-JSON "facts" modelspoke memoizes (route-name

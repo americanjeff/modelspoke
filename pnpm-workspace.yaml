@@ -5,6 +5,6 @@ allowBuilds:
   protobufjs: false
 
 # (The 0.1.2-rc.1-era `overrides` block that forced the whole dsh family to
-# one consistent set is gone: the 0.1.5-rc.2 set is published with
-# self-consistent peer ranges (^0.1.5-rc.2), which is the condition the
+# one consistent set is gone: the 0.1.7 line is published with
+# self-consistent peer ranges (>=0.1.7-alpha.2), which is the condition the
 # block's header asked to be dropped.)

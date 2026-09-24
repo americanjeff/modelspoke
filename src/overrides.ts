@@ -77,8 +77,9 @@ export const NO_THINKING_LEVELS = "none";
  * writers and the client share ONE implementation). The schema-resolved view
  * materializes `input: []` / `thinkingLevelMap: {}` /
  * `compat: { chatTemplateKwargs: {} }` on entries that don't carry them;
- * writing those back would pollute settings.yaml with fields the user never
- * wrote, so every write/compare path passes entries through this first.
+ * writing those back would pollute the profile's patch entry with fields
+ * the user never wrote, so every write/compare path passes entries through
+ * this first.
  * (An explicit `input: []` canonicalizes to absent — the documented rule.)
  *
  * The `thinkingLevelMap: "none"` sentinel is a STRING — a meaningful stored

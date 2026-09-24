@@ -48,8 +48,8 @@ expanded, an in-place card:
   `http://127.0.0.1:8080/v1`.
 - **API key env var name** — the *name* of the environment variable that
   holds the key. modelspoke only ever reads `process.env`; the key's *value*
-  is never stored in `settings.yaml`. Omit it for keyless local servers — no
-  auth header is sent in that case.
+  is never stored in the configuration. Omit it for keyless local servers —
+  no auth header is sent in that case.
 - **Status dot** — green: the last catalog fetch succeeded. Red: the fetch
   failed (hover for the reason). Grey: never checked yet.
 
@@ -94,9 +94,10 @@ written:
 
 The deep template-contract fields (`compat`: `thinkingFormat`, the
 `chatTemplateKwargs` `$var` bindings) are deliberately **not** in the UI:
-they are read-only, hand-edited in `settings.yaml`, and preserved
-byte-for-byte through every UI write — a partial write there would replace
-the template's thinking bindings and break the model mid-conversation.
+they are read-only, hand-edited in the profile's `cordis.patch.yml`
+([below](#the-settings-file)), and preserved byte-for-byte through every UI
+write — a partial write there would replace the template's thinking bindings
+and break the model mid-conversation.
 
 **Reset** (on the detail) drops that model's configuration back to the lower
 tiers; the model stays in the served list.
@@ -122,10 +123,9 @@ providers cannot:
   image tool results reach the wire.
 - Images you paste into the composer cross the wire as `image_url` parts.
 
-In the web UI, `read_image` results render as a real inline image (with the
-tool's text) by default; the `renderReadImages` setting in the `modelspoke:`
-section switches that off, at which point dsh's generic tool rendering owns
-the row again.
+In the web UI, dsh renders `read_image` results as a real inline image (with
+the tool's text) natively — modelspoke's role is the capability gate above,
+which decides whether the model is offered the tool at all.
 
 **Known limitation.** There is no request-budget management yet: on a very
 long thread, `input + max_tokens` can exceed the model's context and the
@@ -135,34 +135,42 @@ offload pass is planned.
 
 ## The settings file
 
-Everything the UI writes lives in the `modelspoke:` section of
-`~/.dsh/settings.yaml`, and you can hand-edit it the same way — dsh watches
-the file and changes apply live:
+Everything the UI writes lives in the **`modelspoke` entry of your profile's
+`cordis.patch.yml`** (e.g. `~/.dsh/profiles/web/cordis.patch.yml` — one file
+per profile; the entry sits in the top-level YAML array alongside any other
+patch entries). You can hand-edit it the same way — dsh watches the file and
+changes apply live:
 
 ```yaml
-modelspoke:
-  routes:
-    - name: llama-swap              # provider key (unique)
-      baseURL: http://127.0.0.1:8080/v1
-      apiKeyEnv: LLAMA_SWAP_API_KEY # optional — the variable's name, not its value
-      models:                       # the served set; presence = served
-        - name: qwen3.8-27b         # harness identity (what the agent names it)
-          id: qwen3.8-27b-6000pro   # wire id (what goes on the wire)
-          defaultEffort: medium     # optional
-          contextWindow: 262144     # any of the canonical fields, when you set them
-          maxTokens: 65536
-          input: [text, image]
-          thinkingLevelMap:         # the harness-level → model-value map
-            off: low
-            low: low
-            medium: medium
-            xhigh: xhigh
-      overrides:                    # per-route, exact wire id → field values
-        qwen3.8-27b-mtp: { contextWindow: 32768 }
-  overrides:                        # legacy top-level shape — still read;
-    some-wire-id: { maxTokens: 4096 }  # same-id entries on a route win per field
-  renderReadImages: true            # inline read_image rendering (web UI only)
+- id: modelspoke
+  name: modelspoke
+  config:
+    routes:
+      - name: llama-swap              # provider key (unique)
+        baseURL: http://127.0.0.1:8080/v1
+        apiKeyEnv: LLAMA_SWAP_API_KEY # optional — the variable's name, not its value
+        models:                       # the served set; presence = served
+          - name: qwen3.8-27b         # harness identity (what the agent names it)
+            id: qwen3.8-27b-6000pro   # wire id (what goes on the wire)
+            defaultEffort: medium     # optional
+            contextWindow: 262144     # any of the canonical fields, when you set them
+            maxTokens: 65536
+            input: [text, image]
+            thinkingLevelMap:         # the harness-level → model-value map
+              off: low
+              low: low
+              medium: medium
+              xhigh: xhigh
+        overrides:                    # per-route, exact wire id → field values
+          qwen3.8-27b-mtp: { contextWindow: 32768 }
+    overrides:                        # legacy top-level shape — still read;
+      some-wire-id: { maxTokens: 4096 }  # same-id entries on a route win per field
 ```
+
+A `settings.yaml` left by an older dsh is imported once when 0.1.7 first
+boots (its `modelspoke:` section lands in this entry, then the file is
+renamed `settings.yaml.imported`), so an existing configuration migrates by
+itself.
 
 A provider with no `models:` list serves its **full catalog** as discovered;
 the first edit to such a provider (removing a row, adding a model, changing a
@@ -171,12 +179,12 @@ edit. Untouched providers round-trip byte-for-byte.
 
 ## What applies live, what needs a restart
 
-- **Content changes** — anything in `settings.yaml`, including the whole
-  `modelspoke:` section — are watched and apply live.
+- **Content changes** — anything in the profile's `cordis.patch.yml`,
+  including the whole `modelspoke` entry — is watched and applies live.
 - **(Un)installing the package** — dsh caches package metadata for the
   process life, so one restart after adding or removing modelspoke from your
   profile. Nothing else needs a restart.
 - **tui/headless profiles** — the Plugins-page settings card is a web
   surface; in tui/headless the plugin serves models exactly the same way and
-  the `settings.yaml` section (plus a first-boot log hint while no provider
-  exists) is the interface.
+  the profile's `modelspoke` entry (plus a first-boot log hint while no
+  provider exists) is the interface.

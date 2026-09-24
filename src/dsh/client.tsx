@@ -61,8 +61,9 @@
  * reasoning-effort map shown only while the capability is ON (**Harness** =
  * the map key / **Model** = the map value or "not supported"), the per-model
  * **Default effort** select (the empty option displays the built-in fallback
- * level), the read-only "preserved from settings.yaml" line (the deep compat
- * fields are NEVER editable — preserved through every save), and the
+ * level), the read-only "preserved from the profile's patch entry" line (the
+ * deep compat fields are NEVER editable — preserved through every save), and
+ * the
  * draft-scoped Reset (marks the entry for deletion in the PENDING commit;
  * nothing is written — the checkmark enables, Cancel discards, "Undo reset"
  * un-marks; on commit the entry is dropped from the provider's OWN map and
@@ -114,12 +115,12 @@ import type { CSSProperties, ReactNode } from "react";
 // context); the 0.1.2-rc.1 client reorg dropped the old
 // dsh-client-runtime re-export, so name it directly from cordis.
 import type { Context as ClientContext } from "@deepseek-ai/cordis";
-// The settings-namespace binder types; loading this module also pulls the
+// The settings-namespace form types; loading this module also pulls the
 // settings domain's SlotMap merge (the 'settings.section' entry) and the
-// ctx.settingsScope context merge into the program.
+// ctx.configForms context merge into the program.
 import type {
-  SettingsScope,
-  SettingsScopeSnapshot,
+  ConfigForm,
+  ConfigFormSnapshot,
 } from "@deepseek-ai/dsh-client-ui-settings/client";
 // Type-only: the ctx.slots service augmentation (the renderer-owned
 // SlotRegistry the card's `slots.inject`/`slots.register` calls ride).
@@ -135,14 +136,14 @@ import type { LlmDiscoveredModel } from "@deepseek-ai/dsh-llm/types";
 // Type-only: loads the `llm` Remote-namespace augmentation into the program
 // (adds `llm` to `TypertRemoteNamespaceMap`, so `ctx.remote.llm` is typed).
 import type {} from "@deepseek-ai/dsh-llm/remote";
-// Type-only: pulls the settings-plugins domain's SlotMap merge (the
-// 'settings.plugin.item' entry the Plugins page's configurable tab
-// declares at runtime) into this program — the same pattern as the
-// 'settings.section' merge above. The tab dispatches this slot once per
-// served settings namespace, so the card registers under the `modelspoke`
-// namespace key it edits (keying on the namespace is what lets an
-// out-of-repo plugin contribute a card — the tab's own extension point).
-import type {} from "@deepseek-ai/dsh-client-ui-settings-plugins/client";
+// Type-only: pulls the plugin-manager domain's SlotMap merge (the
+// 'plugins.bundle.config' entry the Plugins page declares at runtime)
+// into this program — the same pattern as the 'settings.section' merge
+// above. The registration is gated through configForms.whileServed on the
+// `modelspoke` namespace (the 0.1.7 successor of the configurable tab's
+// served-namespace dispatch), so the card shows wherever the section
+// serves this deployment and nowhere the Host does not.
+import type {} from "@deepseek-ai/dsh-client-ui-plugin-manager/client";
 // The pure model-curation contract (the entry-list ops the card's
 // commit writes, the semantic dirty equality, and the status-dot detail
 // text).
@@ -213,26 +214,24 @@ import {
 export const name = "modelspoke";
 
 /**
- * Required services: the slot registry and the settings-namespace binder;
+ * Required services: the slot registry and the settings config forms;
  * `ctx.remote.llm.discoverModels` interrogates a route's endpoint (the
  * same handler the node half registers — `registerModelDiscovery` in
  * src/dsh/index.ts). The card's `/api/modelspoke` metadata fetch is a
  * plain same-origin POST over the host's authenticated `/api` transport
  * (no service — see src/dsh/channel.ts for why it is a Fetch route, not
- * an RPC channel). `settingsScope` serves both the read path and the
+ * an RPC channel). `configForms` serves both the read path and the
  * writes: its `set(field, value)` is a single-top-level-field write
  * addressed as `path: [field]` over the settings seam's `settings.mutate`,
  * auto-fenced with the latest namespace revision
  * (docs/dsh-plugin-guidance.md §3).
  */
-export const inject = ["slots", "settingsScope", "remote", "remote.llm"];
+export const inject = ["slots", "configForms", "remote", "remote.llm"];
 
 /**
- * The exact namespace string the node half registers:
- * `settingsNamespace("modelspoke")` (src/dsh/index.ts, the `NS` const) is
- * identity —
- * dsh-settings validates the shape and returns the string unchanged — so the
- * wire section is `modelspoke:` and the scope binds the bare string.
+ * The profile entry id the node half's `Config` serves (the `id:` of this
+ * bundle's row in dsh.cordis.yml — equals the package name) and the key the
+ * 0.1.7 `configForms` model binds under.
  */
 const NAMESPACE = "modelspoke";
 
@@ -240,8 +239,8 @@ const NAMESPACE = "modelspoke";
  * i18n — the host's durable `locale` settings namespace (dsh's locale
  * plugin): id `locale`, field `preference`, allowed values `['zh','en']`;
  * ABSENCE delegates to the browser. The client reads it through the SAME
- * `settingsScope.bind` the section uses for its own `modelspoke` namespace
- * (the bound scope's `getSnapshot().value` is `{ preference? }`, and its
+ * `configForms.get` the section uses for its own `modelspoke` namespace
+ * (the form's `getSnapshot().value` is `{ preference? }`, and its
  * `subscribe` fires on a language change — live switching, no reload).
  */
 interface LocaleSection {
@@ -251,7 +250,7 @@ interface LocaleSection {
 /** The stable empty snapshot the locale hook reads when the bind FAILED
  * (browser-only: no scope to subscribe to, so the locale never re-resolves
  * live). A module const keeps the reference stable for useSyncExternalStore. */
-const EMPTY_LOCALE_SNAPSHOT: SettingsScopeSnapshot<LocaleSection> = {
+const EMPTY_LOCALE_SNAPSHOT: ConfigFormSnapshot<LocaleSection> = {
   status: "unavailable",
   value: undefined,
   base: undefined,
@@ -589,18 +588,19 @@ function overridesOf(section: unknown): Record<string, unknown> {
 }
 
 /**
- * The INVERSE of the settings mirror's default materialization. The
- * client's snapshot is the schema-RESOLVED section (dsh-settings
- * `resolve` = `schema(base + userLayer)`), and schemastery materializes
- * empty defaults for the object/dict/array schema fields: an entry
- * without `input` reads back as `input: []`, without `thinkingLevelMap`
- * as `thinkingLevelMap: {}`, without `compat` as
- * `compat: { chatTemplateKwargs: {} }`. Writing those back would pollute
- * settings.yaml with fields the user never wrote — the schema's
- * all-optional shape says empty = absent, so every entry the client
- * reads from the snapshot passes through this before it is written or
- * compared. (An explicit `input: []` canonicalizes to absent, the same
- * lenient treatment the `models` allow-list gets in {@link routesOf}.)
+ * The INVERSE of the resolved-config default materialization. The
+ * client's snapshot is the schema-RESOLVED plugin config (the Loader
+ * composes the bundle's schema defaults under the profile's patch layer),
+ * and schemastery materializes empty defaults for the object/dict/array
+ * schema fields at read time: an entry without `input` reads back as
+ * `input: []`, without `thinkingLevelMap` as `thinkingLevelMap: {}`,
+ * without `compat` as `compat: { chatTemplateKwargs: {} }`. Writing those
+ * back would pollute the profile's cordis.patch.yml with fields the user
+ * never wrote — the schema's all-optional shape says empty = absent, so
+ * every entry the client reads from the snapshot passes through this
+ * before it is written or compared. (An explicit `input: []`
+ * canonicalizes to absent, the same lenient treatment the `models`
+ * allow-list gets in {@link routesOf}.)
  */
 // The resolved-view phantom inverse (input: [] / thinkingLevelMap: {} /
 // compat: {chatTemplateKwargs: {}} strip, "none"-aware) lives ONCE in the
@@ -972,8 +972,8 @@ const ms = {
   /** The per-model detail block (the reference's expanded row):
    *  two-column Context window / Max output tokens, the Capabilities group
    *  (image input + reasoning effort), the Default-effort field, the
-   *  thinking-level rows, the read-only "preserved from settings.yaml"
-   *  line, Reset. */
+   *  thinking-level rows, the read-only "preserved from the profile's patch
+   *  entry" line, Reset. */
   modelDetail: {
     display: "flex",
     flexDirection: "column",
@@ -1488,10 +1488,9 @@ type ConfigPatch = Partial<
  * "Thinking level map" label + hint are dropped); 4) the per-model
  * **Default effort** select (the entry's `defaultEffort` — shown only
  * while the reasoning capability is ON; empty = the built-in fallback);
- * 5) the read-only "preserved from
- * settings.yaml" line (the deep compat fields are NEVER editable — they
- * are preserved through every save by the write discipline); 6) Reset
- * (bottom-right, draft-scoped).
+ * 5) the read-only "preserved from the profile's patch entry" line (the deep
+ * compat fields are NEVER editable — they are preserved through every save by
+ * the write discipline); 6) Reset (bottom-right, draft-scoped).
  *
  * The controls show the draft's values once the draft exists (the first
  * edit creates it — the client seeds it from the EFFECTIVE committed ∪
@@ -2047,16 +2046,16 @@ function StatusDot({ state, locale }: { state: StatusDotState; locale: LocaleId 
 
 /** Register the Modelspoke section once the shell declares the slot. */
 export function apply(ctx: ClientContext): void {
-  // One bound scope per plugin activation. The shared describe mirror (owned
+  // One config form per plugin activation. The shared describe mirror (owned
   // by the ui-settings base) is the single settings.describe reader; it
   // reloads on the forwarded settings/document-updated event and
-  // connection/reset, so every bound scope re-derives and its subscribers
+  // connection/reset, so every config form re-derives and its subscribers
   // fire for settings changes made anywhere — this tab, another tab, or an
   // out-of-band process writing the document (docs/dsh-plugin-guidance.md
   // §3). Reads ride that mirror; writes below settle into it (fold-back on
-  // success, reload on failure), so the scope snapshot is always current
+  // success, reload on failure), so the form snapshot is always current
   // when a write settles.
-  const scope = ctx.settingsScope.bind({ namespace: NAMESPACE });
+  const scope = ctx.configForms.get(NAMESPACE);
   // Capture stable callables once (useSyncExternalStore resubscribes when
   // the subscribe function identity changes).
   const subscribe = (listener: () => void) => scope.subscribe(listener);
@@ -2070,7 +2069,7 @@ export function apply(ctx: ClientContext): void {
   // `modelspoke` scope — binding adds no wire read (it derives from the shared
   // describe mirror) and activation never blocks on it.
   const localeAttempt = attemptLocaleBind(
-    (): SettingsScope<LocaleSection> => ctx.settingsScope.bind<LocaleSection>({ namespace: "locale" }),
+    (): ConfigForm<LocaleSection> => ctx.configForms.get<LocaleSection>("locale"),
   );
   const localeScope = localeAttempt.scope;
   const localeBindFailed = localeAttempt.bindFailed;
@@ -2080,7 +2079,7 @@ export function apply(ctx: ClientContext): void {
   // live re-resolution).
   const localeSubscribe = (listener: () => void) =>
     localeScope !== null ? localeScope.subscribe(listener) : () => undefined;
-  const localeGetSnapshot = (): SettingsScopeSnapshot<LocaleSection> =>
+  const localeGetSnapshot = (): ConfigFormSnapshot<LocaleSection> =>
     localeScope !== null ? localeScope.getSnapshot() : EMPTY_LOCALE_SNAPSHOT;
 
   /**
@@ -2256,6 +2255,8 @@ export function apply(ctx: ClientContext): void {
         setWriteError(t(locale, "saveFailed"));
         setWriteErrorSnap(now);
         return false;
+      } catch (error) {
+        throw error;
       } finally {
         setSaving(false);
       }
@@ -3414,8 +3415,12 @@ export function apply(ctx: ClientContext): void {
           entries: freshModels !== null ? [...freshModels] : null,
           baseEntries: freshModels !== null ? freshModels : [],
           // Re-seed the slot keys from the verified rows (unique
-          // names keep their names — nothing remounts; a committed
-          // duplicate would get its -2/-3 keys, never a fused row).
+          // names keep their names — a row that carried a name through
+          // the draft keeps its key and nothing remounts; a row ADDED
+          // during this draft carries its fresh `new-` token, so the
+          // re-seeded name key remounts that one row and its open
+          // detail collapses on the Apply; a committed duplicate would
+          // get its -2/-3 keys, never a fused row).
           rowKeys: freshModels !== null ? seedRowKeys(freshModels.map((e) => e.name)) : [],
           configDrafts: {},
           pendingReset: [],
@@ -3767,8 +3772,8 @@ export function apply(ctx: ClientContext): void {
                                     // line — never the draft, never the
                                     // discovery).
                                     const committed = committedSourceOf(card, route, row);
-                                    // The "preserved from settings.yaml"
-                                    // line source — the committed entry
+                                    // The "preserved from the profile's patch
+                                    // entry" line source — the committed entry
                                     // MINUS the identity fields (name / id /
                                     // defaultEffort are not "deep template
                                     // fields" — an explicit entry's `name`
@@ -4014,22 +4019,26 @@ export function apply(ctx: ClientContext): void {
     );
   };
 
-  // The modelspoke card inside Settings → Plugins → Plugin configuration
-  // (the configurable tab's extension point — its own contract,
-  // @deepseek-ai/dsh-client-ui-settings-plugins: the tab dispatches
-  // `settings.plugin.item` once per SERVED settings namespace and pairs it
-  // with the card registered under that key — keying on the namespace is
-  // what lets an out-of-repo plugin contribute a card). The tab owns the
-  // card list; the bundle-purity gate forbids importing the in-box card
-  // chrome as values (it ships CSS modules this bundle cannot take), so
-  // this card draws its own disclosure header — name + description,
-  // chevron, `aria-expanded` — in the page's plain-element inline styles,
-  // the reference module CSS's geometry ported token-for-token like the
-  // `ms` section chrome (PluginCard.module.css, dsh 0.1.1-rc.2). The body
+  // The modelspoke card inside the Plugins page's bundle detail (the
+  // plugin-manager's extension point — its own contract,
+  // @deepseek-ai/dsh-client-ui-plugin-manager: the page renders the
+  // `plugins.bundle.config` entry keyed by this bundle's package name
+  // between the description and the rows, the 0.1.7 successor of the
+  // configurable tab's `settings.plugin.item` dispatch). The bundle-purity
+  // gate forbids importing the in-box card chrome as values (it ships CSS
+  // modules this bundle cannot take), so this card draws its own disclosure
+  // header — name + description, chevron, `aria-expanded` — in the page's
+  // plain-element inline styles, the reference module CSS's geometry ported
+  // token-for-token like the `ms` section chrome (PluginCard.module.css,
+  // dsh 0.1.1-rc.2). The body
   // (the section itself) stays MOUNTED while collapsed — hidden, not
   // unmounted — so an in-flight provider draft, an open provider card, and
   // an open model detail survive a collapse (the in-box cards keep their
   // staged drafts the same way, through their form controllers).
+  // The registration is gated through configForms.whileServed on the
+  // `modelspoke` namespace: while the Host serves the section the bundle
+  // page shows its Configuration section; a deployment without it shows no
+  // trace.
   const ModelspokeCard = () => {
     const [open, setOpen] = useState(false);
     // i18n — the live locale (preference → browser; live via subscribe).
@@ -4063,7 +4072,13 @@ export function apply(ctx: ClientContext): void {
     );
   };
 
-  ctx.slots.inject("settings.plugin.item", () =>
-    ctx.slots.register({ name: "settings.plugin.item", key: "modelspoke" }, ModelspokeCard),
+  ctx.effect(
+    () =>
+      ctx.configForms.whileServed([NAMESPACE], () =>
+        ctx.slots.inject("plugins.bundle.config", () =>
+          ctx.slots.register({ name: "plugins.bundle.config", key: name }, ModelspokeCard),
+        ),
+      ),
+    "modelspoke: settings card (while the Host serves the section)",
   );
 }

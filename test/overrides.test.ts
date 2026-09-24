@@ -1,4 +1,11 @@
 import { describe, expect, it } from "vitest";
+// 0.1.7: the schema's `routes` field is `.volatile()`, so a schema-resolved
+// section carries it as a live ref ({ get, [write] }) — the node half's
+// `section()` unwraps it; assertions here do the same.
+const plain = (value: unknown): unknown =>
+  value !== null && typeof value === "object" && typeof (value as { get?: unknown }).get === "function"
+    ? (value as { get: () => unknown }).get()
+    : value;
 import {
   NO_THINKING_LEVELS,
   cleanRoutePhantoms,
@@ -455,7 +462,7 @@ describe("ModelspokeConfigSchema — dual shape + the nothink sentinel", () => {
       routes: [{ name: "r", baseURL: "http://x/v1" }],
       overrides: { m: { contextWindow: 1 } },
     });
-    expect((resolved.routes as Record<string, unknown>[])[0].name).toBe("r");
+    expect((plain(resolved.routes) as Record<string, unknown>[])[0].name).toBe("r");
     expect((resolved.overrides as Record<string, unknown>).m).toBeDefined();
   });
 
@@ -471,7 +478,7 @@ describe("ModelspokeConfigSchema — dual shape + the nothink sentinel", () => {
         },
       ],
     });
-    const route = (resolved.routes as Record<string, unknown>)[0];
+    const route = (plain(resolved.routes) as Record<string, unknown>)[0];
     // The resolved view materializes the empty defaults on the nested entry
     // too (input: [] / compat: {chatTemplateKwargs: {}}) — the phantom
     // inverse strips them at the writers.
@@ -487,7 +494,7 @@ describe("ModelspokeConfigSchema — dual shape + the nothink sentinel", () => {
     const nested = ModelspokeConfigSchema({
       routes: [{ name: "r", baseURL: "http://x/v1", overrides: { m: { thinkingLevelMap: "none" } } }],
     });
-    expect((nested.routes as Record<string, unknown>)[0]).toMatchObject({
+    expect((plain(nested.routes) as Record<string, unknown>)[0]).toMatchObject({
       overrides: { m: { thinkingLevelMap: "none" } },
     });
     const top = ModelspokeConfigSchema({ overrides: { m: { thinkingLevelMap: "none" } } });
@@ -516,17 +523,17 @@ describe("ModelspokeConfigSchema — dual shape + the nothink sentinel", () => {
     const resolved = ModelspokeConfigSchema({
       routes: [{ name: "r", baseURL: "http://x/v1", models: [{ name: "a", id: "a" }] }],
     });
-    expect((resolved.routes as Record<string, unknown>)[0]).toBeDefined();
+    expect(plain(resolved.routes)).toBeDefined();
   });
 
   it("routesOf carries the per-route map through as legacyOverrides (non-empty plain object only; FULL_CATALOG)", () => {
-    const section = ModelspokeConfigSchema({
+    const resolved = ModelspokeConfigSchema({
       routes: [
         { name: "r", baseURL: "http://x/v1", overrides: { m: { contextWindow: 1 } } },
         { name: "s", baseURL: "http://y/v1" },
       ],
     });
-    const routes = routesOf(section);
+    const routes = routesOf({ ...resolved, routes: plain(resolved.routes) });
     // The union-typed thinkingLevelMap gets no materialized default (schemastery
     // skips union fields), so an absent map stays absent — unlike the dict fields.
     expect(routes[0].models).toBeNull();
@@ -730,9 +737,9 @@ describe("normalizeModelEntry / entryFromLegacyId (dual-shape element readers)",
         },
       ],
     });
-    const [route] = routesOf(resolved);
+    const [route] = routesOf({ ...resolved, routes: plain(resolved.routes) });
     const entry = route.models![0]!;
-    expect(resolved.routes[0]!.models[0]).toMatchObject({
+    expect((plain(resolved.routes) as Record<string, unknown>[])[0].models![0]).toMatchObject({
       input: [],
       compat: { chatTemplateKwargs: {} },
     });

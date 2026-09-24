@@ -4,6 +4,33 @@ Coarse and consumer-facing — the kind of thing a dsh user or a `./lib`
 consumer can act on. Build-internal work (tests, comments, docs) does not
 belong here.
 
+## 0.3.0 — 2026-09-23
+
+- **The host requirement is now dsh 0.1.7** (breaking) — modelspoke loads
+  on dsh 0.1.7 and newer only (verified against 0.1.7-rc.1); dsh 0.1.5 and
+  0.1.6 hosts are no longer supported. 0.1.7 removed the settings brand
+  seam (the `installSettingsSection` / "Plugin configuration" card slot)
+  modelspoke's editor used to ride, and rebuilt plugin configuration
+  around the profile's Loader config.
+- **The provider editor moved to the sidebar Plugins page** — dsh 0.1.7
+  dropped the Settings → Plugins "Plugin configuration" area; the
+  Modelspoke card now lives on the **Plugins** page in the sidebar: open
+  the **modelspoke** row in the Installed group and the card renders on
+  its bundle detail page. Same card, same flow (+ Add provider, model
+  rows, thinking levels, Apply).
+- **Your configuration lives in the profile's `cordis.patch.yml` now** —
+  dsh 0.1.7 stores plugin config as an id-targeted entry in the active
+  profile's `cordis.patch.yml` instead of the DSH_HOME-root
+  `settings.yaml`. A `settings.yaml` left by an older dsh is imported once
+  on first boot (sections mapped to the same-id entries, then the file
+  renamed `settings.yaml.imported`), so an existing `modelspoke:` section
+  migrates automatically; manual edits go in the profile's patch entry
+  from now on.
+- **Tool-role messages are first-class** (internal) — the request context
+  now emits `role: "tool"` results through the host's
+  `createToolResultMessage` (dsh 0.1.7's shape) instead of the legacy
+  folding, with the system prompt split per the new host contract.
+
 ## 0.2.0 — 2026-09-11
 
 - **The host requirement is now dsh 0.1.5** (breaking) — modelspoke loads on

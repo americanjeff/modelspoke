@@ -75,9 +75,10 @@ import {
   stripEntryPhantoms,
 } from "../overrides.js";
 import type { ModelEntry } from "../types.js";
-// i18n — the status-dot detail text and the "preserved from settings.yaml"
-// line are USER-FACING strings, so their WORDING comes from the locale bundle
-// (./locales.js) while the CLASSIFICATION / SELECTION logic stays here (the
+// i18n — the status-dot detail text and the "preserved from the profile's
+// patch entry" line are USER-FACING strings, so their WORDING comes from the
+// locale bundle (./locales.js) while the CLASSIFICATION / SELECTION logic
+// stays here (the
 // single pure source). The caller threads the resolved locale in; the en
 // output is byte-identical to the pre-i18n hard-coded text (test/locales.test.ts
 // pins it). Framework-neutral: locales.js has no react / DOM.
@@ -966,9 +967,9 @@ function mergedEntryMeaningful(entry: Record<string, unknown>): boolean {
 }
 
 /**
- * The detail's "preserved from settings.yaml" line (moved here from
- * the client: the detail is the surface it feeds, and the pure module is
- * the unit-tested home). The compact read-only summary of the entry's
+ * The detail's "preserved from the profile's patch entry" line (moved here
+ * from the client: the detail is the surface it feeds, and the pure module
+ * is the unit-tested home). The compact read-only summary of the entry's
  * fields the detail does NOT expose as controls: `reasoning` (named), the
  * deep `compat` block — `supportsDeveloperRole`, `thinkingFormat`,
  * `chatTemplateKwargs`, … — listed only when it carries keys other than

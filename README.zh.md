@@ -44,7 +44,7 @@ modelspoke 的角色是标出哪些模型能够接收图像。
 
 ## 安装与设置
 
-前提：带有 `dsh plugin` 命令的 dsh **0.1.5**（已针对 0.1.5-rc.2 验证）。
+前提：带有 `dsh plugin` 命令的 dsh **0.1.7**（已针对 0.1.7-rc.1 验证）。
 
 1. **安装：** dsh 使用一个叫 pnpm 的工具来安装插件。如果你还没有安装它，
    先安装：
@@ -62,9 +62,9 @@ modelspoke 的角色是标出哪些模型能够接收图像。
 
 2. **如果 dsh 正在运行，重启它**，让它加载新插件。
 
-3. **打开 Modelspoke 设置卡片。** 在 dsh web UI 中，左侧栏底部的齿轮
-   打开设置；在侧边栏选择 **Plugins**，在 Plugin configuration 标签页
-   展开 **Modelspoke** 卡片，然后 **+ Add provider**：
+3. **打开 Modelspoke 设置卡片。** 在 dsh web UI 中，在左侧栏选择
+   **Plugins**，在 Installed 分组中打开 **modelspoke** 行 —— Modelspoke
+   卡片渲染在其 bundle 详情页上。展开卡片，然后 **+ Add provider**：
 
    ![Settings → Plugins → Modelspoke 卡片 — 提供方行与提供方卡片](docs/screenshots/modelspoke-01-section.png)
 
@@ -86,7 +86,7 @@ modelspoke 的角色是标出哪些模型能够接收图像。
 ## 附录
 
 - [docs/usage.zh.md](docs/usage.zh.md) — 安装之后使用 modelspoke：解析
-  链条、每模型详情、nothink 模型、图像、`settings.yaml` 形状
+  链条、每模型详情、nothink 模型、图像、配置文件形状
 - [docs/preset-authoring.zh.md](docs/preset-authoring.zh.md) — 从工件中
   的模板编写模型预设（`preset-draft` / `drift-check` 工作流）
 - [docs/llama-swap-setup.zh.md](docs/llama-swap-setup.zh.md) — 最小
@@ -95,5 +95,5 @@ modelspoke 的角色是标出哪些模型能够接收图像。
 - [docs/provider-details.md](docs/provider-details.md) — 提供方参考：五个
   后端的选型理由、各能力值的来源、每提供方的差异（仅英文）
 - [docs/dsh-plugin-guidance.md](docs/dsh-plugin-guidance.md) — 与 dsh
-  集成：适配器注册契约、Web UI 半边、settings 写入、read_image 工具视图变通
+  集成：适配器注册契约、Web UI 半边、settings 写入、read_image 工具视图历史
   （仅英文）

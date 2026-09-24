@@ -73,19 +73,19 @@ describe("firstBootHint", () => {
     expect(hint).not.toContain("\n");
   });
 
-  it("points at both fix locations (settings.yaml section, the Plugins-page card)", () => {
+  it("points at both fix locations (the profile patch entry, the Plugins-page card)", () => {
     const hint = firstBootHint(undefined) as string;
-    expect(hint).toContain("`modelspoke:` section");
-    expect(hint).toContain("settings.yaml");
+    expect(hint).toContain("`modelspoke` entry");
+    expect(hint).toContain("cordis.patch.yml");
     expect(hint).toContain("Modelspoke");
-    expect(hint).toContain("Plugins settings");
+    expect(hint).toContain("Plugins page");
   });
 
-  it("speaks providers, not routes (the yaml key stays routes:)", () => {
+  it("speaks providers, not routes (the yaml key stays config.routes)", () => {
     const hint = firstBootHint(undefined) as string;
     expect(hint).toContain("0 providers");
     expect(hint).not.toContain("0 routes");
-    expect(hint).toContain("one entry under `routes:`");
+    expect(hint).toContain("one entry under its `config.routes`");
   });
 
   it("carries the existing log-line style (modelspoke: prefix)", () => {

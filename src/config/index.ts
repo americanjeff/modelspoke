@@ -4,8 +4,8 @@
  * Pure functions only — NO dsh imports. The dsh host adapter wires the
  * live settings object into `loadOverrides`; this module just normalizes.
  *
- * The plugin-owned settings namespace (dsh: `modelspoke:` in
- * `~/.dsh/settings.yaml`) holds:
+ * The plugin-owned settings namespace (dsh: the `modelspoke` entry in the
+ * profile's `cordis.patch.yml`) holds:
  * - `routes` — `{ name, baseURL, apiKeyEnv?, models?,
  *   overrides? }[]` — a route (the UI's "provider") carries its PER-ROUTE
  *   model overrides in `overrides` (exact model id → the override entry

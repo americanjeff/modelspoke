@@ -34,7 +34,7 @@ Models with multimodal capabilities are great but if you add them via the dsh cu
 
 ## Installation & setup
 
-Prerequisite: dsh **0.1.5** (verified against 0.1.5-rc.2) with the
+Prerequisite: dsh **0.1.7** (verified against 0.1.7-rc.1) with the
 `dsh plugin` command.
 
 1. **Install:** dsh installs plugins with a tool called pnpm. If you don't
@@ -53,10 +53,10 @@ Prerequisite: dsh **0.1.5** (verified against 0.1.5-rc.2) with the
 
 2. **Restart dsh if it is running**, so it picks up the plugin.
 
-3. **Open the Modelspoke settings card.** In the dsh web UI, the gear at
-   the bottom of the left rail opens Settings; select **Plugins** in the
-   sidebar, expand the **Modelspoke** card in the Plugin configuration tab,
-   then **+ Add provider**:
+3. **Open the Modelspoke settings card.** In the dsh web UI, select
+   **Plugins** in the left sidebar, open the **modelspoke** row in the
+   Installed group — the Modelspoke card renders on its bundle detail
+   page. Expand the card, then **+ Add provider**:
 
    ![Settings → Plugins → Modelspoke card — the provider row and the provider card](docs/screenshots/modelspoke-01-section.png)
 
@@ -81,7 +81,7 @@ Prerequisite: dsh **0.1.5** (verified against 0.1.5-rc.2) with the
 
 - [docs/usage.md](docs/usage.md) — using modelspoke after install: the
   resolution chain, the per-model detail, nothink models, images, and the
-  `settings.yaml` shape
+  profile patch configuration shape
 - [docs/preset-authoring.md](docs/preset-authoring.md) — authoring a model
   preset from the template in the artifact (the `preset-draft` /
   `drift-check` workflow)
@@ -93,4 +93,4 @@ Prerequisite: dsh **0.1.5** (verified against 0.1.5-rc.2) with the
   per-provider quirks
 - [docs/dsh-plugin-guidance.md](docs/dsh-plugin-guidance.md) — integrating
   with dsh: the adapter registration contract, the web-UI half, settings
-  writes, and the read_image tool-view workaround
+  writes, and the read_image tool-view history

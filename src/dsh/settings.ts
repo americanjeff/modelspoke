@@ -22,11 +22,12 @@
  *               entry wins; the first section write folds it in —
  *               src/overrides.ts).
  *
- * The schemastery schema below is the WRITE gate: it is registered with the
- * settings seam via `installSettingsSection`, so an invalid section is
- * refused where it is written (it accepts the entry-array `models` shape
+ * The schemastery schema below is the plugin's `Config` write gate (0.1.7):
+ * the loader validates the entry's `config:` against it where written (it
+ * accepts the entry-array `models` shape
  * only — a legacy string allow-list is refused; the writer emits the form
- * the in-memory state needs). Read-side extraction ({@link routesOf}) is
+ * the in-memory state needs); `routes` is `.volatile()` so a card save
+ * commits in place. Read-side extraction ({@link routesOf}) is
  * lenient (skips malformed entries, never throws) — the same posture as the
  * core's `loadOverrides`: invalid values dropped, validation with helpful
  * errors deferred.
@@ -177,7 +178,10 @@ const route = z.object({
  * paths).
  */
 export const ModelspokeConfigSchema: Schemastery<any, any> = z.object({
-  routes: z.array(route).default([]),
+  // Volatile: the web card edits routes in place; a save commits into the
+  // running fiber's refs and emits `loader/volatile-update`, which re-runs
+  // the adapter/directory registration (no re-apply).
+  routes: z.array(route).default([]).volatile(),
   overrides: z.dict(overrideEntry).default({}),
 });
 

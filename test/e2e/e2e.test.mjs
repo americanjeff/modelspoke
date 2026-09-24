@@ -24,7 +24,7 @@ const LLSWAP_BIN = process.env.E2E_LLAMA_SWAP || "llama-swap";
 
 // The e2e selectors ride on dsh's own web UI, so a dsh bump can break them
 // silently — fail loud at the boundary (filestab's same guard).
-const DSH_VERSION = "0.1.5-rc.2";
+const DSH_VERSION = "0.1.7-rc.1";
 
 // The agent loop's system prompt opens with this — the discriminator for
 // the MAIN turn's request in the fake backend's log (the session-title
@@ -53,18 +53,24 @@ function sha256(text) {
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** Poll until fn() is truthy or the timeout elapses. */
+/** Poll until fn() is truthy or the timeout elapses. A throwing predicate
+ * counts as false — but the last error rides the timeout message (a
+ * silently-swallowed throw made a real failure look like a slow write). */
 async function until(fn, { timeout = 20000, interval = 250, what = "condition" } = {}) {
   const deadline = Date.now() + timeout;
+  let lastErr = null;
   for (;;) {
     let value;
     try {
       value = await fn();
-    } catch {
+      lastErr = null;
+    } catch (err) {
       value = false;
+      lastErr = err;
     }
     if (value) return value;
-    if (Date.now() > deadline) throw new Error(`timeout waiting for ${what}`);
+    if (Date.now() > deadline)
+      throw new Error(`timeout waiting for ${what}${lastErr ? ` (last error: ${lastErr.message})` : ""}`);
     await sleep(interval);
   }
 }
@@ -299,6 +305,26 @@ function makeScratchHome(root) {
     rmSync(linkDir, { recursive: true, force: true });
     symlinkSync(path.resolve(liveWeb, spec.slice(5)), linkDir);
   }
+  // 0.1.7: plugin config moved from the DSH_HOME-root settings.yaml into
+  // the PROFILE's cordis.patch.yml — the live web profile copy carries this
+  // machine's real modelspoke routes. The e2e journeys need a known-empty
+  // section (J1 starts from the empty state), so strip the row. Entry
+  // blocks start at column 0 (`- id:`); continuation lines are indented.
+  const webPatch = path.join(web, "cordis.patch.yml");
+  if (existsSync(webPatch)) {
+    const lines = readFileSync(webPatch, "utf8").split("\n");
+    const out = [];
+    let skip = false;
+    for (const line of lines) {
+      if (/^- id:\s*modelspoke\s*$/.test(line)) {
+        skip = true;
+        continue;
+      }
+      if (skip && /^- /.test(line)) skip = false;
+      if (!skip) out.push(line);
+    }
+    writeFileSync(webPatch, out.join("\n"));
+  }
   return home;
 }
 
@@ -394,19 +420,51 @@ function headlessTurn(root, home, task, { sink, env = {} } = {}) {
   return { out, sinkLines };
 }
 
-const settingsPath = (home) => path.join(home, "settings.yaml");
-function writeSettings(home, doc) {
-  writeFileSync(settingsPath(home), YAML.dump(doc, { lineWidth: -1 }));
+// 0.1.7: plugin config moved from the DSH_HOME-root settings.yaml into
+// each PROFILE's cordis.patch.yml, so the e2e's settings plumbing is
+// per-profile. The WEB profile's patch (copied from the live profile)
+// carries !!js expressions js-yaml cannot load, so its modelspoke entry
+// is read as a surgical block extraction of the text (the journeys write
+// web state only through the UI); the HEADLESS profile's patch is fresh
+// and plain, so it round-trips whole.
+const webPatchPath = (home) => path.join(home, "profiles", "web", "cordis.patch.yml");
+// The `- id: modelspoke` entry block: a column-0 `- id: modelspoke` line
+// plus its indented continuation lines (entry blocks start at column 0).
+const MK_BLOCK = /^-[ \t]*id:[ \t]*modelspoke[^\n]*\n(?:^[ \t]+[^\n]*\n)*/m;
+function webPatchText(home) {
+  return readFileSync(webPatchPath(home), "utf8");
 }
-function readSettings(home) {
-  return YAML.load(readFileSync(settingsPath(home), "utf8")) ?? {};
+/** The web patch's `- id: modelspoke` entry (or undefined). The block is
+ * pure data (no !!js), so it loads on its own; the load is a ONE-ITEM
+ * sequence (the block text is a `- ` item), so take the first element. */
+function webModelspokeEntry(home) {
+  const m = webPatchText(home).match(MK_BLOCK);
+  const loaded = m ? YAML.load(m[0]) : undefined;
+  return Array.isArray(loaded) ? loaded[0] : loaded;
 }
-function settingsText(home) {
-  return readFileSync(settingsPath(home), "utf8");
+const hsPatchPath = (home) => path.join(home, "profiles", "headless", "cordis.patch.yml");
+function hsEntries(home) {
+  return (YAML.load(readFileSync(hsPatchPath(home), "utf8")) ?? []).filter(
+    (e) => e !== null && typeof e === "object",
+  );
 }
-
-function baseSettings() {
-  return { "ui-onboarding": { welcomeNoticeVersion: "2026-08-13.1" } };
+function hsWrite(home, entries) {
+  writeFileSync(hsPatchPath(home), YAML.dump(entries, { lineWidth: -1 }));
+}
+/** Upsert (config undefined removes) a headless-patch entry. `name` is
+ * the row's package name (defaults to the id — true for modelspoke, whose
+ * row name IS the package name). */
+function hsSetEntry(home, id, config, name = id) {
+  const entries = hsEntries(home);
+  const i = entries.findIndex((e) => e.id === id);
+  if (config === undefined) {
+    if (i >= 0) entries.splice(i, 1);
+  } else if (i >= 0) {
+    entries[i] = { ...entries[i], config };
+  } else {
+    entries.push({ id, name, config });
+  }
+  hsWrite(home, entries);
 }
 
 function handWrittenBlock(baseURL) {
@@ -449,22 +507,22 @@ async function openModelspoke(browser, url) {
     await openSidebar.first().click();
     await page.waitForTimeout(800);
   }
-  // Settings → Plugins → Plugin configuration (the first tab) → the
-  // modelspoke card — the disclosure starts collapsed; expand it.
-  await page.evaluate(() => {
-    const els = [...document.querySelectorAll('button, a, [role="tab"]')];
-    els.find((l) => (l.textContent || "").trim().toLowerCase() === "settings")?.click();
-  });
-  await page.waitForTimeout(1500);
+  // 0.1.7: the card left Settings (the read-only "Built-in plugins"
+  // inventory holds that nav seat) — it renders in the sidebar Plugins
+  // page's BUNDLE DETAIL, where the plugin-manager renders the
+  // `plugins.bundle.config` slot entry between the description and the
+  // rows: sidebar "Plugins" → "View modelspoke" (the card title button)
+  // → the card, whose disclosure starts collapsed; expand it.
   await page.evaluate(() => {
     const els = [...document.querySelectorAll('button, a, [role="tab"]')];
     els.find((l) => (l.textContent || "").trim().toLowerCase() === "plugins")?.click();
   });
-  await page.waitForTimeout(1500);
-  await page.evaluate(() => {
-    const els = [...document.querySelectorAll('button, a, [role="tab"]')];
-    els.find((l) => (l.textContent || "").trim().toLowerCase() === "plugin configuration")?.click();
+  const bundleDetail = page.getByRole("button", { name: "View modelspoke" });
+  await until(async () => (await bundleDetail.count()) > 0, {
+    timeout: 20000,
+    what: "the modelspoke bundle card on the Plugins page",
   });
+  await bundleDetail.first().click();
   await page.waitForTimeout(500);
   const card = page.locator('button[aria-expanded]', { hasText: "Modelspoke" });
   await until(async () => {
@@ -587,11 +645,11 @@ async function j1_firstProvider(root, home, page, swap) {
   await u.defaultEffort("fake-flagship").selectOption({ value: "medium" });
   await u.apply.click();
   await until(async () => {
-    const route = readSettings(home).modelspoke?.routes?.find((r) => r.name === "fake-swap");
+    const route = webModelspokeEntry(home)?.config?.routes?.find((r) => r.name === "fake-swap");
     return route?.models?.some((m) => m.id === "fake-flagship" && m.defaultEffort === "medium") === true;
-  }, { timeout: 30000, what: "apply commit → settings.yaml" });
+  }, { timeout: 30000, what: "apply commit → web cordis.patch.yml" });
 
-  const route = readSettings(home).modelspoke.routes.find((r) => r.name === "fake-swap");
+  const route = webModelspokeEntry(home).config.routes.find((r) => r.name === "fake-swap");
   eq(route.baseURL, swap.baseUrl, "J1: route baseURL written as entered");
   ok(!route.apiKeyEnv, "J1: no key env written (the field was left empty)");
   eq(route.models.length, 3, "J1: the catalog materialized to an explicit 3-model list");
@@ -605,13 +663,14 @@ async function j1_firstProvider(root, home, page, swap) {
  * J10 (a) — the zero-route boot hint. A headless boot whose `modelspoke:`
  * section carries zero routes logs EXACTLY ONE hint line; the default model
  * (a hand-written pi-ai block on the fake swap) keeps the boot + turn alive.
+ * 0.1.7: the section lives in the HEADLESS profile's cordis.patch.yml —
+ * the fresh headless patch carries no modelspoke row, so zero routes is
+ * the standing state; only the pi-ai block + default-model rows are added.
  */
 async function j10_bootHint(root, home, swap) {
-  const saved = readSettings(home);
-  const doc = baseSettings();
-  doc["llm-pi-ai"] = { providers: { "llama-swap": handWrittenBlock(swap.baseUrl) } };
-  doc["agent-default-model"] = { provider: "llama-swap", model: "fake-flagship" };
-  writeSettings(home, doc);
+  const saved = hsEntries(home);
+  hsSetEntry(home, "llm-pi-ai", { providers: { "llama-swap": handWrittenBlock(swap.baseUrl) } }, "@deepseek-ai/dsh-llm-pi-ai");
+  hsSetEntry(home, "agent-default-model", { provider: "llama-swap", model: "fake-flagship" }, "@deepseek-ai/dsh-agent-default-model");
   const sink = installLogSink(root);
   const { out, sinkLines } = headlessTurn(root, home, "Reply with exactly the word: PONG", {
     sink,
@@ -621,7 +680,7 @@ async function j10_bootHint(root, home, swap) {
   ok(out.includes("PONG"), "J10: the zero-route boot still serves (hand-written block)");
   const hints = sinkLines.filter((l) => l.includes("modelspoke: active with 0 providers"));
   eq(hints.length, 1, "J10: the zero-route boot hint fires exactly once");
-  writeSettings(home, saved);
+  hsWrite(home, saved);
 }
 
 /**
@@ -631,32 +690,41 @@ async function j10_bootHint(root, home, swap) {
  * selectable; its value is never sent (omitWhenOff).
  */
 async function j5_wireLadder(root, home, swap) {
-  const base = readSettings(home);
+  // 0.1.7: the headless profile's modelspoke config is the route the WEB
+  // profile committed in J1 (profiles keep their own patches now) — seed
+  // the headless patch per case with that config plus the per-effort
+  // default-model row, and restore the empty patch afterwards.
+  const mkConfig = webModelspokeEntry(home)?.config;
+  const saved = hsEntries(home);
   const cases = [
     { effort: "off", think: false, wire: undefined },
     { effort: "low", think: true, wire: "low" },
     { effort: "medium", think: true, wire: "medium" },
     { effort: "xhigh", think: true, wire: "xhigh" },
   ];
-  for (const c of cases) {
-    const doc = { ...base };
-    doc["agent-default-model"] = {
-      provider: "fake-swap",
-      model: "fake-flagship",
-      reasoningEffort: c.effort,
-    };
-    writeSettings(home, doc);
-    const before = swap.readBackendLog("fake-flagship").length;
-    const { out } = headlessTurn(root, home, "Reply with exactly the word: PONG");
-    ok(out.includes("PONG"), `J5(${c.effort}): headless turn got the fake's PONG`);
-    const req = swap.mainTurnRequest("fake-flagship");
-    ok(req !== undefined && swap.readBackendLog("fake-flagship").length > before, `J5(${c.effort}): the fake backend saw the turn`);
-    eq(req.body.model, "fake-flagship", `J5(${c.effort}): wire model id`);
-    const kwargs = req.body.chat_template_kwargs ?? {};
-    eq(kwargs.enable_thinking, c.think, `J5(${c.effort}): enable_thinking === ${c.think}`);
-    eq(kwargs.reasoning_effort, c.wire, `J5(${c.effort}): reasoning_effort wire shape`);
-    eq(kwargs.preserve_thinking, true, `J5(${c.effort}): preserve_thinking passthrough`);
-    match(req.headers["user-agent"] ?? "", /^deepseek-harness\/\d/, `J5(${c.effort}): the attribution user-agent rides the request`);
+  try {
+    for (const c of cases) {
+      hsSetEntry(home, "modelspoke", mkConfig);
+      hsSetEntry(
+        home,
+        "agent-default-model",
+        { provider: "fake-swap", model: "fake-flagship", reasoningEffort: c.effort },
+        "@deepseek-ai/dsh-agent-default-model",
+      );
+      const before = swap.readBackendLog("fake-flagship").length;
+      const { out } = headlessTurn(root, home, "Reply with exactly the word: PONG");
+      ok(out.includes("PONG"), `J5(${c.effort}): headless turn got the fake's PONG`);
+      const req = swap.mainTurnRequest("fake-flagship");
+      ok(req !== undefined && swap.readBackendLog("fake-flagship").length > before, `J5(${c.effort}): the fake backend saw the turn`);
+      eq(req.body.model, "fake-flagship", `J5(${c.effort}): wire model id`);
+      const kwargs = req.body.chat_template_kwargs ?? {};
+      eq(kwargs.enable_thinking, c.think, `J5(${c.effort}): enable_thinking === ${c.think}`);
+      eq(kwargs.reasoning_effort, c.wire, `J5(${c.effort}): reasoning_effort wire shape`);
+      eq(kwargs.preserve_thinking, true, `J5(${c.effort}): preserve_thinking passthrough`);
+      match(req.headers["user-agent"] ?? "", /^deepseek-harness\/\d/, `J5(${c.effort}): the attribution user-agent rides the request`);
+    }
+  } finally {
+    hsWrite(home, saved);
   }
 }
 
@@ -694,7 +762,7 @@ async function j4_curation(home, page) {
   // A fresh context lands on the section with the card collapsed.
   await until(() => u.edit(name).count(), { what: "fake-swap row" });
 
-  const shaBefore = sha256(settingsText(home));
+  const shaBefore = sha256(webPatchText(home));
 
   await ensureCardOpen(page, u, name);
   await u.detail("fake-flagship").click();
@@ -703,17 +771,17 @@ async function j4_curation(home, page) {
   await page.waitForTimeout(300);
   await u.cancel.click();
   await page.waitForTimeout(500);
-  eq(sha256(settingsText(home)), shaBefore, "J4: cancel leaves settings.yaml byte-identical");
+  eq(sha256(webPatchText(home)), shaBefore, "J4: cancel leaves the web patch byte-identical");
 
   await ensureCardOpen(page, u, name); // the card closed on cancel
   await until(() => u.modelRow("fake-mini").count(), { what: "the fake-mini row" });
   await u.removeModel("fake-mini").click();
   await u.apply.click();
   await until(async () => {
-    const r = readSettings(home).modelspoke?.routes?.find((x) => x.name === name);
+    const r = webModelspokeEntry(home)?.config?.routes?.find((x) => x.name === name);
     return Array.isArray(r?.models) && r.models.length === 2;
   }, { timeout: 30000, what: "YAML allow-list = 2 models" });
-  let route = readSettings(home).modelspoke.routes.find((r) => r.name === name);
+  let route = webModelspokeEntry(home).config.routes.find((r) => r.name === name);
   eq(route.models.map((m) => m.id).sort(), ["fake-flagship", "fake-text"], "J4: allow-list = the other two ids");
 
   // Enter selects the filtered row; the name auto-fills.
@@ -726,10 +794,10 @@ async function j4_curation(home, page) {
   await page.waitForTimeout(300);
   await u.apply.click();
   await until(async () => {
-    const r = readSettings(home).modelspoke?.routes?.find((x) => x.name === name);
+    const r = webModelspokeEntry(home)?.config?.routes?.find((x) => x.name === name);
     return Array.isArray(r?.models) && r.models.length === 3;
   }, { timeout: 30000, what: "YAML allow-list = 3 models again" });
-  route = readSettings(home).modelspoke.routes.find((r) => r.name === name);
+  route = webModelspokeEntry(home).config.routes.find((r) => r.name === name);
   eq(
     route.models.map((m) => m.id).sort(),
     ["fake-flagship", "fake-mini", "fake-text"],
@@ -741,10 +809,10 @@ async function j4_curation(home, page) {
   await typeInput(page, u.contextWindow("fake-flagship"), "9000");
   await u.apply.click();
   await until(async () => {
-    const r = readSettings(home).modelspoke?.routes?.find((x) => x.name === name);
+    const r = webModelspokeEntry(home)?.config?.routes?.find((x) => x.name === name);
     return r?.models?.find((m) => m.id === "fake-flagship")?.contextWindow === 9000;
   }, { timeout: 30000, what: "YAML contextWindow = 9000" });
-  let entry = readSettings(home).modelspoke.routes.find((r) => r.name === name).models.find((m) => m.id === "fake-flagship");
+  let entry = webModelspokeEntry(home).config.routes.find((r) => r.name === name).models.find((m) => m.id === "fake-flagship");
   // Commit rewrites the entry as the EFFECTIVE (committed ∪ discovered)
   // snapshot (client.tsx effectiveBaselineOf); the $var compat block is never copied from discovery.
   eq(entry.maxTokens, 2048, "J4: the effective maxTokens materializes into the entry (effective-snapshot commit)");
@@ -808,13 +876,24 @@ async function j4_curation(home, page) {
   await typeInput(page, u.maxTokens("fake-flagship"), "555");
   await u.apply.click();
   await until(async () => {
-    const r = readSettings(home).modelspoke?.routes?.find((x) => x.name === name);
+    const r = webModelspokeEntry(home)?.config?.routes?.find((x) => x.name === name);
     const e = r?.models?.find((m) => m.id === "fake-flagship");
     return e !== undefined && e.contextWindow === 8192 && e.maxTokens === 555;
   }, { timeout: 30000, what: "YAML flagship = the fresh effective snapshot (discovery 8192 + draft 555)" });
-  entry = readSettings(home).modelspoke.routes.find((r) => r.name === name).models.find((m) => m.id === "fake-flagship");
+  entry = webModelspokeEntry(home).config.routes.find((r) => r.name === name).models.find((m) => m.id === "fake-flagship");
   ok(entry.input?.includes("image") === true, "J4: the re-added row's image input materializes from discovery");
 
+  // The Apply's rebase re-seats the re-added row's slot key (its draft's
+  // fresh `new-` token becomes the committed name key), so the open detail
+  // COLLAPSES as part of the settle — and every button stays `saving`-
+  // disabled until the host's final reconcile clears it (the YAML until
+  // above passes on the file write, slightly BEFORE that). Wait for the
+  // settle: the detail is either already collapsed (the re-seated row) or
+  // its Reset is enabled (a stable-key row keeps its detail open).
+  await until(async () => {
+    const n = await u.reset("fake-flagship").count();
+    return n === 0 || (await u.reset("fake-flagship").isEnabled());
+  }, { what: "J4: the re-added row settled (detail re-seated or reset enabled)" });
   // Re-open the detail if the last Apply collapsed it.
   const showDetails = u.detail("fake-flagship");
   if ((await showDetails.count()) > 0) await showDetails.click();
@@ -824,7 +903,7 @@ async function j4_curation(home, page) {
   await until(() => u.undoReset("fake-flagship").count(), { what: "reset armed" });
   await u.apply.click();
   await until(async () => {
-    const r = readSettings(home).modelspoke?.routes?.find((x) => x.name === name);
+    const r = webModelspokeEntry(home)?.config?.routes?.find((x) => x.name === name);
     const e = r?.models?.find((m) => m.id === "fake-flagship");
     return e !== undefined && !("contextWindow" in e) && !("defaultEffort" in e);
   }, { timeout: 30000, what: "YAML flagship entry back to identity-only" });
@@ -832,7 +911,7 @@ async function j4_curation(home, page) {
 
 /**
  * J10 (b) — a dead port: the row's red dot + the card's one-line error +
- * Retry, and the failed fetch writes nothing to settings.yaml.
+ * Retry, and the failed fetch writes nothing to the profile's patch file.
  */
 async function j10_deadPort(home, page) {
   const u = ui(page);
@@ -855,14 +934,14 @@ async function j10_deadPort(home, page) {
   });
   ok(await u.catalogError.count() > 0, "J10: the card shows the one-line catalog error");
   ok(await u.retry.count() > 0, "J10: Retry is present");
-  const doc = readSettings(home);
-  const dead = doc.modelspoke.routes.find((r) => r.name === "dead");
+  const mk = webModelspokeEntry(home)?.config ?? {};
+  const dead = mk.routes.find((r) => r.name === "dead");
   ok(dead !== undefined, "J10: the dead route exists (the Add committed)");
   ok(!("models" in dead), "J10: the failed fetch wrote no models list");
-  ok(doc.modelspoke.routes.some((r) => r.name === "fake-swap"), "J10: the live route untouched");
+  ok(mk.routes.some((r) => r.name === "fake-swap"), "J10: the live route untouched");
   await u.del("dead").click();
   await until(async () => (await u.edit("dead").count()) === 0, { what: "dead provider deleted" });
-  ok(readSettings(home).modelspoke.routes.every((r) => r.name !== "dead"), "J10: the dead route is gone from YAML");
+  ok(webModelspokeEntry(home).config.routes.every((r) => r.name !== "dead"), "J10: the dead route is gone from the patch");
 }
 
 
@@ -975,7 +1054,6 @@ async function main() {
   const web = await bootDshWeb(root, home);
   console.log(`dsh web: ${web.url}`);
 
-  writeSettings(home, baseSettings());
 
   const browser = await chromium.launch({ headless: true, executablePath: chrome });
   let pass = true;
@@ -1016,9 +1094,10 @@ async function main() {
     console.error(`\nFAIL after ${assertions} assertions: ${err.message}`);
     console.error(String(err.stack ?? "").split("\n").slice(0, 12).join("\n"));
     if (existsSync(shot)) console.error(`failure screenshot: ${shot}`);
-    for (const name of ["settings.yaml"]) {
-      const p = path.join(home, name);
-      if (existsSync(p)) console.error(`\n--- ${name} (at failure) ---\n${readFileSync(p, "utf8")}`);
+    for (const p of [webPatchPath(home), hsPatchPath(home)]) {
+      if (existsSync(p)) {
+        console.error(`\n--- ${p.replace(`${home}/`, "")} (at failure) ---\n${readFileSync(p, "utf8")}`);
+      }
     }
     for (const log of [web.logPath, path.join(root, "llama-swap.log")]) {
       if (existsSync(log)) console.error(`\n--- ${path.basename(log)} (tail) ---\n${readFileSync(log, "utf8").split("\n").slice(-40).join("\n")}`);
@@ -1036,8 +1115,28 @@ async function main() {
   if (pass) console.log(`\npass — ${assertions} assertions, all green`);
 }
 
-main().catch((err) => {
-  console.error(`fatal: ${err.message}`);
-  console.error(String(err.stack ?? "").split("\n").slice(0, 12).join("\n"));
-  process.exit(1);
-});
+// The screenshot script (test/e2e/shots.mjs) reuses the suite's scratch-home
+// / boot / navigation helpers — export them and run main() only when this
+// file is the entry point.
+export {
+  DSH_VERSION,
+  until,
+  findChrome,
+  startFakeSwap,
+  makeScratchHome,
+  bootDshWeb,
+  openModelspoke,
+  ui,
+  typeInput,
+};
+
+const IS_DIRECT_RUN =
+  process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (IS_DIRECT_RUN) {
+  main().catch((err) => {
+    console.error(`fatal: ${err.message}`);
+    console.error(String(err.stack ?? "").split("\n").slice(0, 12).join("\n"));
+    process.exit(1);
+  });
+}

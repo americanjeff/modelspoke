@@ -144,8 +144,8 @@ const STRINGS = {
     zh: "还没有提供方 — 在下方添加第一个。",
   },
   emptyProvidersHint: {
-    en: "The `modelspoke:` section of settings.yaml remains editable by hand (a provider is one entry under `routes:`); this list reflects it live.",
-    zh: "settings.yaml 中的 `modelspoke:` 段落仍可手动编辑（一个提供方是 `routes:` 下的一条）；此列表实时反映它。",
+    en: "The `modelspoke` entry of the profile's `cordis.patch.yml` remains editable by hand (a provider is one entry under its `config.routes`); this list reflects it live.",
+    zh: "profile 的 `cordis.patch.yml` 里的 `modelspoke` 条目仍可手动编辑（一个提供方是其 `config.routes` 下的一条）；此列表实时反映它。",
   },
   saveFailed: {
     en: "Save failed — the settings changed in the meantime or the write was refused. The list below shows the current state.",
@@ -395,8 +395,8 @@ const STRINGS = {
     zh: "{id} 的默认推理强度",
   },
   preservedLine: {
-    en: "Preserved from settings.yaml (read-only): {summary}",
-    zh: "保留自 settings.yaml（只读）：{summary}",
+    en: "Preserved from the profile's patch entry (read-only): {summary}",
+    zh: "保留自 profile 的 patch 条目（只读）：{summary}",
   },
   resetPendingNote: {
     en: "The entry will be deleted on save — the model stays active and its configuration resolves from server discovery / presets / defaults again.",
@@ -484,8 +484,8 @@ const STRINGS = {
     zh: "reasoning：关",
   },
   preservedDeepFields: {
-    en: "deep template fields present ({keys}) — edit in settings.yaml",
-    zh: "存在深层模板字段（{keys}）— 请在 settings.yaml 中编辑",
+    en: "deep template fields present ({keys}) — edit in the profile's `cordis.patch.yml`",
+    zh: "存在深层模板字段（{keys}）— 请在 profile 的 `cordis.patch.yml` 中编辑",
   },
 
   errProviderGone: {

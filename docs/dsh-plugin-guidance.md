@@ -2,16 +2,16 @@
 
 *Reference for the dsh (DeepSeek Harness) integration in `src/dsh/`: the
 adapter contract, the settings seam, and shipping a web UI. Behavior was
-verified against dsh **0.1.2-rc.1** (e2e: 85 assertions; unit: 796); the
-exact signatures are in the npm-published dsh package (and its
-`@deepseek-ai/*` sub-packages) — consult those `.d.ts` files, don't copy
-from this doc.*
+verified against dsh **0.1.7-rc.1** (e2e + unit suite green against a live
+0.1.7-rc.1 `dsh web`); the exact signatures are in the npm-published dsh
+package (and its `@deepseek-ai/*` sub-packages) — consult those `.d.ts`
+files, don't copy from this doc.*
 
-*Version tolerance: the **node half loads on both 0.1.1 and 0.1.2** — the
-symbols that moved between the two route through `src/dsh/compat.ts`
-(§3). The **client bundle targets the 0.1.2-rc.1 web shell** (its
-`ctx.remote` surface and module table, §2); it is built and e2e-verified
-against 0.1.2 and has not been verified against a 0.1.1 shell.*
+*Version floor: the **node half loads on dsh 0.1.7 and newer only** —
+0.1.5/0.1.6 hosts are no longer supported (the settings brand seam they
+exposed was removed in 0.1.7; §3). The **client bundle targets the 0.1.7
+web shell** (its `configForms` surface and module table, §2); it is built
+and e2e-verified against 0.1.7-rc.1.*
 
 ## 1. Node half: registering an LLM adapter
 
@@ -169,11 +169,12 @@ target provider.
 - **`ReasoningEffortId` is opaque**: dsh core never validates it against a
   fixed enum; pi-ai-based adapters brand the seven thinking-level strings
   (`off|minimal|low|medium|high|xhigh|max`).
-- **Settings reads go through the `current()` thunk** (from
-  `installSettingsSection`) — never cache the resolved value across
-  operations; `validate` refuses unserviceable writes *where they are written*
-  (`settings.mutate` answers `settings-rejected` naming the offending route
-  and model).
+- **Settings reads go through the composed-config thunk** (`apply(ctx,
+  config)` takes the live composed config — volatile fields as reference
+  objects read with `.get()`, §3) — never cache a read value across
+  operations; the schema refuses unserviceable writes *where they are written*
+  (an invalid `settings.mutate` payload is rejected before persisting,
+  naming the offending route and model).
 
 ### 1.5 Dynamic (user-chosen) route keys — SPIKE 1: yes
 
@@ -261,21 +262,18 @@ The browser bundle is the **built artifact** — the host hashes the file and
 serves it as-is (no-cache, `/plugins/<id>/client.js`); sources are never
 served.
 
-**Dev-time versioning (the 0.1.2 line).** The dsh client packages are
+**Dev-time versioning (the 0.1.7 line).** The dsh client packages are
 dev-only *type inputs* — the shipped profile supplies the runtime
 identities, so the browser never loads modelspoke's `node_modules`. The
-`devDependencies` therefore float on the **`next` dist-tag** rather than a
-version range: dist-tags are the only cross-prerelease-series float (a
-range like `^0.1.1-rc.2` never matches `0.1.2-rc.1` under semver prerelease
-rules, and `*` excludes prereleases); the lockfile pins whatever `next`
-resolved to until you `pnpm update`. One harness-side wrinkle: the
-published 0.1.2-rc.1 packages' *peer* ranges are still shaped for the 0.1.1
-line, so a plain resolve drags a 0.1.1-rc.2 sub-tree into the typecheck
-program — stale Context augmentations and a split `TypertRemoteNamespaceMap`
-(`ctx.remote.llm` untyped) — even though the runtime is consistent. The
-`pnpm-workspace.yaml` override table forces the whole dsh family to one
-0.1.2-rc.1 set; it is dev-only (zero runtime effect) and can be dropped
-once the harness republishes with self-consistent peer ranges.
+`devDependencies` therefore float on a **dist-tag** rather than a version
+range: dist-tags are the only cross-prerelease-series float (a range like
+`^0.1.1-rc.2` never matches `0.1.2-rc.1` under semver prerelease rules, and
+`*` excludes prereleases); the lockfile pins whatever the tag resolved to
+until you `pnpm update`. (The 0.1.2-era wrinkle — published peer ranges
+shaped for the previous line dragging a stale sub-tree into the typecheck
+program, worked around with a `pnpm-workspace.yaml` override table — is
+gone: the 0.1.5+ family publishes with self-consistent peer ranges, so the
+plain resolve is the consistent set and the override table was dropped.)
 
 **The scanner's row-name precondition (the one structural blocker).** The
 client scanner resolves the package by the *row name*:
@@ -308,9 +306,10 @@ For modelspoke the relevant ones:
 
 | Slot | Renders as | Notes |
 |---|---|---|
-| `settings.plugin.item` | A card inside Settings → Plugins → Configurable, **keyed by settings namespace** | **modelspoke's editor home** — *explicitly designed for plugins shipped outside the dsh repo*; the tab enumerates every namespace the host exposes in `settings.describe` and dispatches one card per namespace — a plugin that registers a namespace + a card under that key appears automatically. |
+| `plugins.bundle.config` | The bundle's configuration on the sidebar **Plugins** page's bundle-detail view, **keyed by the bundle's package name** | **modelspoke's editor home (0.1.7)** — *explicitly designed for plugins shipped outside the dsh repo*; the page renders the entry between the bundle's description and its rows, gated by the plugin's own registration (modelspoke gates through `configForms.whileServed` on its namespace, so a deployment that does not serve the section shows no trace). `view: 'page'` is for forms with their own save controls; modelspoke renders inline. |
+| `plugins.row.config` | A **Configure** control on one row's page, keyed `<package name>#<row id>` | The per-row successor of the settings-card rows; modelspoke keeps row editing inside its bundle card instead. |
 | `settings.section` | A new row in the Settings nav opening a full page | The full-page section home (the in-box sections' choice); the nav is auto-projected from the section ledger — zero shell edits. modelspoke moved its surface into the plugin card above. |
-| `settings.plugins.tab`, `settings.general.item`, `settings.trigger/header/action/close`, `shell.overlay`, `sidebar.footer.action` | Tabs / rows / chrome / overlays | Open but less fitting; there is **no third-party top-level nav seat** — Settings is the supported home. |
+| `settings.plugins.tab`, `settings.general.item`, `settings.trigger/header/action/close`, `shell.overlay`, `sidebar.footer.action` | Tabs / rows / chrome / overlays | Open but less fitting; Settings (0.1.7) is the **read-only** "Built-in plugins" inventory — configuration moved to the sidebar Plugins page, the supported home. |
 
 ### 2.3 The loopback endpoint bridge (client ↔ its own server code)
 
@@ -403,35 +402,38 @@ live 0.1.2-rc.1 `dsh web` instance).
 
 ## 3. Settings writes — the seam
 
-The canonical consumer wiring is the settings-section installer — **the seam
-moved in 0.1.2**: 0.1.1 shipped a free function
-`installSettingsSection(ctx, ns, schema, entry, hooks)`; 0.1.2 made it a
-method on the settings service, reached through the scoped
-`ctx.inject(['settings'], (sc) => sc.settings.installSection(…))` (a bare
-`ctx.settings` read is refused without the inject), and dropped the
-`settingsNamespace(name)` branded export — the namespace methods now take a
-plain lowercase-hyphenated string. modelspoke routes the moved symbols
-(installer, namespace brand, `deepEqualJson`) through `src/dsh/compat.ts` —
-a namespace import plus a runtime `??` pick, because a bare ESM named import
-of a moved symbol is a **link-time** throw, before any code runs — so one
-build wires on either host. The semantics are unchanged in both: while a
-settings service exists, register the plugin's namespace with the
-composition entry as the `base` layer and hand the plugin a `current()`
-source thunk; when the service goes away (disposal, provider reload), fall
-back to the entry so the plugin keeps working exactly as composed. Hooks:
-`setSource` (source swapped at attach/detach), `onChange` (re-derive
-registration facts — this is where route re-registration happens), `validate`
-(refuse unserviceable writes at the write site).
+**The settings brand seam is gone as of 0.1.7.** The 0.1.2→0.1.6 line
+(0.1.1's free function `installSettingsSection(…)` became a method on the
+settings service reached through the scoped `ctx.inject(['settings'], …)`
+with plain lowercase-hyphenated namespace strings) was removed: a plugin
+now declares a `Config` schema, and the LOADER composes bundle patch →
+profile patch → schema defaults, validating the entry's `config:` against
+the schema at the write site. The composed config is readable at
+`apply(ctx, config)` time. Schema fields marked `.volatile()` (modelspoke:
+`routes`) arrive as LIVE REFS — a web-card save commits in place into the
+running ref and emits the loader-side event `loader/volatile-update`
+(absent from cordis's Context Events map, so the subscribe takes a generic
+cast at that boundary); the plugin listens and re-runs its registration
+glue — adapter/directory registration re-derived from the new section, no
+re-apply, no re-registration of discovery (once per namespace).
+`deepEqualJson` is a local copy in `src/dsh/compat.ts` (no dsh-settings
+value import). All writes are browser-driven: the card reads through
+`configForms.get(NS)` (snapshot + subscribe, re-derived on the shared
+describe mirror) and writes through `configForms.set(field, value)` — a
+single-top-level-field write over the settings seam's `settings.mutate`,
+auto-fenced with the latest namespace revision — and the card's
+registration is gated through `configForms.whileServed` so it shows only
+while the Host serves the namespace (§2.2). The node half holds no
+settings service and writes nothing.
 
-Write paths from inside the plugin: `ctx.settings.update(NS, patch)` (merge),
-`ctx.settings.replace(NS, section)` (wholesale; `replace({})` resets to
-base+defaults), `ctx.settings.mutate(NS, [{op, path, value?}, …])`
-(path-addressed edits — the right tool when the caller holds a *redacted*
-view; in 0.1.2 these are reached inside the `ctx.inject(['settings'], …)`
-scope — `compat.ts` hides the difference). All three validate before
-persisting, are serialized per-namespace, and
-emit `settings/updated` (resolved value changed) and `settings/document-updated`
-(raw section changed); the plugin's `onChange` then re-registers.
+Write paths (0.1.7): the browser half's `configForms.set(field, value)`
+is a single-top-level-field `settings.mutate` write addressed as
+`path: [field]` — the path-addressed form is the right tool when the
+caller holds a *redacted* view. Writes validate before persisting, are
+serialized per-namespace, and emit `settings/updated` (resolved value
+changed) and `settings/document-updated` (raw section changed); volatile
+fields additionally emit `loader/volatile-update`, which re-runs the
+node half's registration glue.
 
 **The fence is per-call.** Each read of a namespace returns a `revision`;
 passing it back as `expectedRevision` makes the write reject if the section
@@ -440,16 +442,19 @@ changed in the meantime — a lost fence raises `SettingsConflictError`
 `expectedRevision`, a concurrent write is simply overwritten (re-read and
 retry is the pattern).
 
-**Out-of-band document edits take the same path.** The file provider (one
-YAML document under the harness home — `settings.yaml`, see
-`testenv/baseline/settings.yaml` for the reference shape) is watched and
-hot-reloaded (write-settle debounce); every write re-reads the document under
-a **cross-process writer lock** and patches it as a **comment-preserving
-leaf-level diff**. A hand edit in an editor publishes through the same seam as
-an in-plugin write — there is no second code path to keep in sync. For the
-full contract (descriptor shape, conflict semantics, redaction, file-provider
-behavior): the `dsh-settings` / `dsh-settings-file` type docblocks in the npm
-package, and modelspoke's own docblocks in `src/dsh/settings.ts`.
+**Out-of-band document edits take the same path.** The document is the
+active profile's `cordis.patch.yml` — a top-level YAML array of
+id-targeted loader patch entries (the plugin's own entry carries its
+`config:`; `!!js` expressions allowed). The file is watched and hot-reloaded
+(write-settle debounce); every write re-reads the document under the profile
+**writer lock** and persists it atomically (tmp + rename), replacing the
+entry's `config:` node in a document-level parse/edit (comments elsewhere in
+the file survive; a replaced subtree does not). A hand edit in an editor
+publishes through the same seam as an in-plugin write — there is no second
+code path to keep in sync. For the full contract (descriptor shape, conflict
+semantics, the config-editor lifecycle): the `dsh-settings` /
+`dsh-config-editor` type docblocks in the npm package, and modelspoke's own
+docblocks in `src/dsh/settings.ts`.
 
 ## 4. Tool views: rendering `read_image` results
 
@@ -471,55 +476,43 @@ loaded on demand via the session's attachment reader — already exists, but is
 keyed to *message* content only: a tool result's image block is never handed
 to it.
 
-### Technical solution (the 3-step host fix)
+### The fix landed in the host
 
-1. **Thread the image loader into the tool view.** The tool tree already
-   *receives* the message-image renderer on its owner props but never
-   forwards it into the keyed `tool.call.toolview` owner — add it to the
-   owner props and pass it through.
-2. **Render image content blocks in the row.** Either in the generic tool
-   card for every settled result, or — matching the existing per-tool views —
-   as a keyed `read_image` tool view. The `tool.call.toolview` slot is open,
-   keyed by tool name, session-scoped, and its key domain is explicitly
-   third-party: an unclaimed key falls back to the generic card.
-3. **Skip image blocks in the text derivation** so the expanded text body is
-   the envelope only (the image renders as an image, not a stringified ref);
-   update the pinned test to the new shape.
+dsh 0.1.5 ships its own `read_image` row — read-family chrome,
+collapsed-by-default card, session-authorized image loader — that renders
+the tool result's image block natively; the generic card no longer flattens
+tool-result images into a JSON blob. The three-step shape above (thread the
+loader, render the block, skip it in the text derivation) is what the
+in-tree row amounts to. Issue #3998 (surfacing **MCP `meta.images`** —
+base64 payloads with no durable storage identity) remains a separate,
+complementary path: the `read_image` image already has a
+content-addressed durable identity, so re-basing it to meta-base64 would
+bloat every logged/replayed turn with a redundant copy; the two paths
+should be unified in one "render image-bearing blocks" pass rather than
+landed as two overlapping patches.
 
-### The shipped plugin-side workaround (modelspoke, zero dsh changes)
+### The retired plugin-side workaround
 
-`src/dsh/toolview.ts` (pure helpers) + `src/dsh/client.tsx` (the gated keyed
-tool view), E2E-verified in the testenv web profile: register a keyed
-`read_image` tool view (the key is unclaimed — additive); load the bytes via
-the injected `sessions` service (attachment reader → object URL, revoked on
-unmount); render a bounded `<img>` + envelope text + caption; **fall back to
-the text line on any load failure**; and **gate the registration itself** on
-an opt-out setting, deregistering live when disabled so the host row owns the
-call (no dead view shadowing a future host fix). This proves the extension
-point works end-to-end without a host change and is the concrete shape a
-host-owned version of steps 1–3 would absorb.
+Before 0.2.0, modelspoke shipped a zero-dsh-change workaround for this
+gap: a keyed `read_image` tool view (pure helpers in `src/dsh/toolview.ts`
++ the gated registration in `src/dsh/client.tsx`), E2E-verified in the
+testenv web profile — bytes loaded through the injected `sessions` service
+(attachment reader → object URL, revoked on unmount), a bounded `<img>` +
+envelope text + caption, a text-line fallback on any load failure, and the
+registration itself gated on the opt-out `renderReadImages` setting so
+disabling handed the call back to the host. Once the host's row landed, the
+view only shadowed it: the view AND the setting were retired in modelspoke
+0.2.0 (`src/dsh/toolview.ts` is gone, `renderReadImages` is no longer a
+field). The lesson for other plugins stands: claim an unclaimed
+`tool.call.toolview` key only while the gap is real, and gate the
+registration so the host row can take the call back cleanly.
 
-### Relationship to dsh issue #3998
+## 5. What dsh 0.1.7 does not offer (anymore)
 
-Complementary, not conflicting. #3998 proposes surfacing **MCP `meta.images`**
-— base64 payloads that ride the wire with *no durable storage identity*; for
-that path, base64-in-meta is the right mechanism. The `read_image` image
-already has a content-addressed durable identity, with the bytes stored,
-validated, and downscaled on disk at write time (admission caps) — re-basing
-them to meta-base64 would bloat every logged/replayed turn with a redundant
-copy. Both paths touch the generic card's content-block rendering, so they
-should be unified in one pass (a single "render image-bearing blocks" step,
-with the text derivation skipping both) rather than landed as two overlapping
-patches.
-
-## 5. What dsh does not offer today
-
-- **No plugin-registered settings-layout surface (the S2/S3 gap).** The
-  Models page's per-namespace layout is a hardcoded string switch — no
-  registry, no metadata lookup, no plugin-visible hook — so a plugin's
-  namespace renders only the built-in *hint* inside the Models dialog, and
-  nothing more. A plugin-owned per-row editor would require the roadmap's S2
-  layout registry / S3 plugin-registered layouts. Until then, the supported
-  pattern is what modelspoke ships: own the full surface as a
-  keyed plugin card on the Plugins page (`settings.plugin.item`) and
-  read/write the namespace through the settings seam (§3).
+- **The Settings-dialog plugin-configuration surface is gone.** 0.1.7's
+  Settings is the **read-only** "Built-in plugins" inventory; third-party
+  configuration lives on the sidebar Plugins page's bundle detail
+  (`plugins.bundle.config`, §2.2). The 0.1.5/0.1.6 `settings.plugin.item`
+  slot and the `installSettingsSection` seam that modelspoke's 0.1.5 card
+  rode do not exist in 0.1.7 — ports from the older line must re-home the
+  surface (exactly what modelspoke 0.3.0 did).

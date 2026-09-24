@@ -6,7 +6,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { ToolCallId, createMessage, createUserMessage, ReasoningEffortId } from "@deepseek-ai/dsh-llm";
+import { ToolCallId, createMessage, createToolResultMessage, createUserMessage, ReasoningEffortId } from "@deepseek-ai/dsh-llm";
 import type { GenerateOptions, ImageBlock, Message, StreamChunk } from "@deepseek-ai/dsh-llm";
 import { attributionHeaders } from "@deepseek-ai/dsh-llm";
 import { ModelspokeAdapter } from "../src/dsh/adapter.js";
@@ -314,10 +314,10 @@ describe("wire capture — attribution + auth + chat_template_kwargs", () => {
     process.env[KEY_ENV] = "dummy";
     try {
       const callId = ToolCallId("call-1");
-      const toolResult = createMessage({
-        role: "user",
-        content: [{ type: "tool-result", toolCallId: callId, content: [{ type: "text", text: "42" }] }],
-        source: { kind: "tool", callId },
+      const toolResult = createToolResultMessage({
+        callId,
+        content: [{ type: "text", text: "42" }],
+        isError: false,
       });
       const assistantToolCall = createMessage({
         role: "assistant",
@@ -456,16 +456,10 @@ describe("wire capture — image input (attachment resolution + guard)", () => {
           content: [{ type: "tool-call", id: callId, name: "read_image", arguments: '{"file_path":"/x.png"}' }],
           source: { kind: "model", provider: "wire-image", model: FLAGSHIP },
         }),
-        createMessage({
-          role: "user",
-          content: [
-            {
-              type: "tool-result",
-              toolCallId: callId,
-              content: [{ type: "text", text: "path: /x.png" }, imageBlock()],
-            },
-          ],
-          source: { kind: "tool", callId },
+        createToolResultMessage({
+          callId,
+          content: [{ type: "text", text: "path: /x.png" }, imageBlock()],
+          isError: false,
         }),
       ];
       const req = await runRoute(ROUTE, "medium", { messages }, wireStore);
@@ -501,10 +495,10 @@ describe("wire capture — image input (attachment resolution + guard)", () => {
           content: [{ type: "tool-call", id: callId, name: "read_image", arguments: "{}" }],
           source: { kind: "model", provider: "wire-image", model: FLAGSHIP },
         }),
-        createMessage({
-          role: "user",
-          content: [{ type: "tool-result", toolCallId: callId, content: [imageBlock()] }],
-          source: { kind: "tool", callId },
+        createToolResultMessage({
+          callId,
+          content: [imageBlock()],
+          isError: false,
         }),
       ];
       const req = await runRoute(ROUTE, "medium", { messages }, wireStore);

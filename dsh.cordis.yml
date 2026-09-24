@@ -10,9 +10,9 @@
 #
 # No config row: the bundle boots dormant (zero routes — the composition
 # entry is absent and the plugin's schema defaults apply), exactly like the
-# in-box `llm-pi-ai` row. A `modelspoke:` section in the user's settings
-# (routes/overrides) brings the routes to life at boot or hot-reload, and
-# the Tier-3 migration seeds it from the hand-written llm-pi-ai block.
+# in-box `llm-pi-ai` row. The `modelspoke` entry in the profile's
+# cordis.patch.yml (routes/overrides) brings the routes to life at boot or
+# hot-reload — the web UI card writes it through the config editor.
 - insert:
     - id: modelspoke
       name: 'modelspoke'

@@ -337,7 +337,7 @@ describe("configDraftReleasesEntry (the legacy top-level half must drop the id b
   });
 });
 
-describe("preservedSummary (the detail's 'preserved from settings.yaml' line)", () => {
+describe("preservedSummary (the detail's 'preserved from the profile's patch entry' line)", () => {
   it("null entry / nothing to show → null", () => {
     expect(preservedSummary("en", null)).toBeNull();
     expect(preservedSummary("en", {})).toBeNull();
@@ -356,27 +356,27 @@ describe("preservedSummary (the detail's 'preserved from settings.yaml' line)", 
       preservedSummary("en", {
         compat: { supportsDeveloperRole: true, thinkingFormat: "extra_body", chatTemplateKwargs: { a: 1 } },
       }),
-    ).toBe("deep template fields present (compat) — edit in settings.yaml");
+    ).toBe("deep template fields present (compat) — edit in the profile's `cordis.patch.yml`");
     expect(preservedSummary("en", { compat: { supportsReasoningEffort: false } })).toBeNull();
   });
 
   it("lists any field the schema does not name", () => {
-    expect(preservedSummary("en", { mystery: "x" })).toBe("deep template fields present (mystery) — edit in settings.yaml");
+    expect(preservedSummary("en", { mystery: "x" })).toBe("deep template fields present (mystery) — edit in the profile's `cordis.patch.yml`");
   });
 
   it("joins the parts with ' · '", () => {
     expect(
       preservedSummary("en", { reasoning: true, mystery: "x", compat: { thinkingFormat: "extra_body" } }),
-    ).toBe("reasoning: on · deep template fields present (mystery, compat) — edit in settings.yaml");
+    ).toBe("reasoning: on · deep template fields present (mystery, compat) — edit in the profile's `cordis.patch.yml`");
   });
 
   it("the zh parts render the zh wording (field names stay verbatim)", () => {
     expect(preservedSummary("zh", { reasoning: true })).toBe("reasoning：开");
     expect(preservedSummary("zh", { reasoning: false })).toBe("reasoning：关");
-    expect(preservedSummary("zh", { mystery: "x" })).toBe("存在深层模板字段（mystery）— 请在 settings.yaml 中编辑");
+    expect(preservedSummary("zh", { mystery: "x" })).toBe("存在深层模板字段（mystery）— 请在 profile 的 `cordis.patch.yml` 中编辑");
     expect(
       preservedSummary("zh", { reasoning: true, mystery: "x", compat: { thinkingFormat: "extra_body" } }),
-    ).toBe("reasoning：开 · 存在深层模板字段（mystery, compat）— 请在 settings.yaml 中编辑");
+    ).toBe("reasoning：开 · 存在深层模板字段（mystery, compat）— 请在 profile 的 `cordis.patch.yml` 中编辑");
   });
 });
 

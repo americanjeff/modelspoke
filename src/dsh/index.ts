@@ -31,29 +31,37 @@ import type {
   DirectoryRegistrationHandle,
   LlmConfigurableProvider,
 } from "@deepseek-ai/dsh-llm";
-import { deepEqualJson, installSettingsSection, settingsNamespace } from "./compat.js";
+import { deepEqualJson } from "./compat.js";
+import { ModelspokeConfigSchema, routesOf } from "./settings.js";
 import { extractFromEntry, fetchModels } from "../discovery/index.js";
 import { normalizeRouteBaseUrl } from "../discovery/url.js";
 import { ModelspokeAdapter } from "./adapter.js";
 import { firstBootHint } from "./boot-hint.js";
 import { installModelspokeChannel } from "./channel.js";
-import { assertServiceable, ModelspokeConfigSchema, routesOf } from "./settings.js";
 
 const name = "modelspoke";
 const Config = ModelspokeConfigSchema;
 const inject = ["llm"];
 
 function apply(ctx: Context, config: unknown): void {
-  const NS = settingsNamespace("modelspoke");
+  // Plain string: dsh-llm's directory/discovery seams take the profile entry
+  // id as a string (0.1.7 — the settings brand seam is gone).
+  const NS = "modelspoke";
   const logger = ctx.logger("modelspoke");
 
-  // The resolved settings-scope source while a settings service is attached;
-  // the composition entry (schema defaults when absent) until then.
-  let source: () => unknown = () => config ?? {};
-  // One stable thunk for BOTH the registration glue and the adapter: the adapter
-  // captured the thunk by value at construction, so reassigning the outer
-  // variable would not reach it — this wrapper always reads `source`.
-  const section = (): unknown => source();
+  // The composed entry config (0.1.7): bundle patch → profile patch → schema
+  // defaults, resolved through the exported `Config` — `routes` is volatile,
+  // so it arrives as a live ref that commits in place on every card save
+  // (no re-apply). `section()` unwraps the ref; the adapter and the
+  // registration glue both read through this one stable thunk.
+  const raw = (config ?? {}) as { routes?: unknown; overrides?: Record<string, unknown> };
+  const section = (): unknown => ({
+    routes:
+      raw.routes !== null && typeof raw.routes === "object" && typeof (raw.routes as { get?: unknown }).get === "function"
+        ? (raw.routes as { get: () => unknown }).get()
+        : raw.routes ?? [],
+    ...(raw.overrides === undefined ? {} : { overrides: raw.overrides }),
+  });
   const adapter = new ModelspokeAdapter({
     settings: section,
     log: (line) => logger.info(line),
@@ -151,24 +159,19 @@ function apply(ctx: Context, config: unknown): void {
   });
 
   // A dormant boot (zero routes) is otherwise silent — no routes, no rows,
-  // no UI. Exactly ONE info line per boot; settling on the first onChange
-  // is the first moment the initial section is known (it is not readable
-  // at apply time — see src/dsh/boot-hint.ts).
-  let hintSettled = false;
-  const settleHint = (): void => {
-    if (hintSettled) return;
-    hintSettled = true;
-    const hint = firstBootHint(section());
-    if (hint !== null) logger.info(hint);
-  };
+  // no UI. Exactly ONE info line per boot; 0.1.7: the composed config is
+  // readable at apply time, so the hint settles here (no onChange latch).
+  const hint = firstBootHint(section());
+  if (hint !== null) logger.info(hint);
 
-  installSettingsSection(ctx, NS, ModelspokeConfigSchema, (config ?? {}) as never, {
-    validate: (value) => assertServiceable(value),
-    setSource: (s) => {
-      source = s;
-    },
-    onChange: () => {
-      settleHint(); // once per boot, from the initial (now-live) section
+  // Volatile commits (the card's route edits) re-run the registration glue:
+  // a save commits `routes` into the running refs and emits this loader
+  // event — no re-apply, no re-registration of discovery (once per
+  // namespace). Not in cordis's Context Events map (loader-side event), so
+  // the subscribe takes a generic cast at this boundary.
+  (ctx as unknown as { on: (event: string, cb: (paths: readonly string[]) => void) => () => void }).on(
+    "loader/volatile-update",
+    () => {
       try {
         ensureRegistration();
       } catch (error) {
@@ -184,7 +187,7 @@ function apply(ctx: Context, config: unknown): void {
         );
       }
     },
-  });
+  );
 
   // Initial registration from the composition entry (dormant when empty).
   // Contained exactly like the onChange path: a route name colliding with a

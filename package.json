@@ -1,6 +1,6 @@
 {
   "name": "modelspoke",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "MIT",
   "description": "Local OpenAI-compatible model-server discovery + tiered reasoning-metadata resolution for DeepSeek Harness (dsh).",
   "author": "American Jeff <jeff@americanjeff.com>",
@@ -76,10 +76,9 @@
     }
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": ">=4.0.2",
-    "@deepseek-ai/dsh-llm": "^0.1.5-rc.2",
-    "@deepseek-ai/dsh-settings": "^0.1.5-rc.2",
-    "@deepseek-ai/schemastery": ">=3.18.2",
+    "@deepseek-ai/cordis": ">=4.0.4",
+    "@deepseek-ai/dsh-llm": ">=0.1.7-alpha.2",
+    "@deepseek-ai/schemastery": ">=3.18.4",
     "@earendil-works/pi-ai": ">=0.82.1"
   },
   "peerDependenciesMeta": {
@@ -92,24 +91,20 @@
     "@deepseek-ai/dsh-llm": {
       "optional": true
     },
-    "@deepseek-ai/dsh-settings": {
-      "optional": true
-    },
     "@deepseek-ai/schemastery": {
       "optional": true
     }
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "^4.0.2",
-    "@deepseek-ai/dsh-api-remotes": "next",
-    "@deepseek-ai/dsh-client-connection": "next",
-    "@deepseek-ai/dsh-client-ui-renderer": "next",
-    "@deepseek-ai/dsh-client-ui-settings": "next",
-    "@deepseek-ai/dsh-client-ui-settings-plugins": "next",
-    "@deepseek-ai/dsh-client-ui-slots": "next",
-    "@deepseek-ai/dsh-llm": "next",
-    "@deepseek-ai/dsh-settings": "next",
-    "@deepseek-ai/schemastery": "^3.18.2",
+    "@deepseek-ai/cordis": "^4.0.4",
+    "@deepseek-ai/dsh-api-remotes": "alpha",
+    "@deepseek-ai/dsh-client-connection": "alpha",
+    "@deepseek-ai/dsh-client-ui-plugin-manager": "alpha",
+    "@deepseek-ai/dsh-client-ui-renderer": "alpha",
+    "@deepseek-ai/dsh-client-ui-settings": "alpha",
+    "@deepseek-ai/dsh-client-ui-slots": "alpha",
+    "@deepseek-ai/dsh-llm": "alpha",
+    "@deepseek-ai/schemastery": "^3.18.4",
     "@earendil-works/pi-ai": "^0.85.1",
     "@types/node": "^22.0.0",
     "@types/react": "~18.3.1",

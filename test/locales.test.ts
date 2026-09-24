@@ -78,7 +78,7 @@ describe("en identity: t('en', …) is the EXACT original client.tsx string", ()
     [
       "emptyProvidersHint",
       undefined,
-      "The `modelspoke:` section of settings.yaml remains editable by hand (a provider is one entry under `routes:`); this list reflects it live.",
+      "The `modelspoke` entry of the profile's `cordis.patch.yml` remains editable by hand (a provider is one entry under its `config.routes`); this list reflects it live.",
     ],
     [
       "saveFailed",
@@ -127,7 +127,7 @@ describe("en identity: t('en', …) is the EXACT original client.tsx string", ()
     [
       "preservedLine",
       { summary: "reasoning: on" },
-      "Preserved from settings.yaml (read-only): reasoning: on",
+      "Preserved from the profile's patch entry (read-only): reasoning: on",
     ],
     ["dotUnknown", undefined, "Not checked yet — expand to fetch"],
     ["dotOkDefault", undefined, "Catalog check passed"],
@@ -163,7 +163,7 @@ describe("en identity: t('en', …) is the EXACT original client.tsx string", ()
     [
       "preservedDeepFields",
       { keys: "mystery, compat" },
-      "deep template fields present (mystery, compat) — edit in settings.yaml",
+      "deep template fields present (mystery, compat) — edit in the profile's `cordis.patch.yml`",
     ],
     [
       "pluginCardDescription",
@@ -316,7 +316,7 @@ describe("zh spot-checks (best-effort; a human zh reviewer is final)", () => {
     expect(zh("preservedReasoningOn")).toBe("reasoning：开");
     expect(zh("preservedReasoningOff")).toBe("reasoning：关");
     expect(zh("preservedDeepFields", { keys: "mystery" })).toBe(
-      "存在深层模板字段（mystery）— 请在 settings.yaml 中编辑",
+      "存在深层模板字段（mystery）— 请在 profile 的 `cordis.patch.yml` 中编辑",
     );
   });
 });

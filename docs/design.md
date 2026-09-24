@@ -411,12 +411,11 @@ whole request, not just image bytes: the 400
 doesn't clamp) was observed on TEXT-ONLY long history.
 
 **Chat rendering.** The web GUI's generic tool card JSON-stringified
-image blocks (upstream gap in dsh). The
-plugin ships a keyed `tool.call.toolview` view for `read_image` (envelope text
-+ rendered inline image from the durable store) gated by the
-`renderReadImages` setting (default on): off → the view deregisters entirely
-and the host's own rendering owns the row. When upstream ships the host fix,
-flip the flag, delete the view — one key, zero migration.
+image blocks (upstream gap in dsh). The plugin once shipped a keyed
+`tool.call.toolview` view for `read_image` (envelope text + rendered inline
+image from the durable store) gated by a `renderReadImages` setting —
+RETIRED in 0.2.0 when the host fix landed (dsh 0.1.5): the host now
+renders `read_image` rows natively, so the view and the flag were deleted.
 
 ### One package, three faces
 
@@ -465,10 +464,15 @@ deps.
 ### User config (decision)
 
 Per-agent, plugin-owned settings namespace — the dsh-native location for
-per-agent state: a `modelspoke:` section in `~/.dsh/settings.yaml` (the pi
-adapter reads the same section shape as JSON). Contents:
+per-agent state: the `modelspoke` entry of the active profile's
+`cordis.patch.yml` on dsh 0.1.7+ (on the 0.1.5/0.1.6 hosts it was the
+`modelspoke:` section of the DSH_HOME-root `settings.yaml`, which 0.1.7
+imports once). The pi adapter reads the same section shape as JSON.
+The entry's `config` contents:
 
 ```yamlc
+# the shape below; in the profile's cordis.patch.yml it is the value of
+# the `modelspoke` entry's `config`
 modelspoke:
   routes:            # the UI's "providers"
     - name: llama-swap        # user-chosen provider key (unique, identity)
@@ -493,7 +497,6 @@ modelspoke:
   overrides:          # LEGACY top-level shape (pre-reorg, hand-edits, the pi
     # set-context-length command). Still fully read; a same-id entry on the
     # route itself wins per field. Folded on first web-UI write.
-  renderReadImages: true   # the read_image view's client presentation flag (node never reads it)
 ```
 
 - **routes** — `{ name, baseURL, apiKeyEnv?, models?, overrides? }[]`. `name`
@@ -567,8 +570,9 @@ provides through the same route, and the dependency-free yaml parser was
 pure maintenance.
 
 Migrating a hand-written block is now a manual two-step: add a modelspoke
-route (**+ Add provider** in the UI, or a `routes:` entry in
-`settings.yaml`) with the name and base URL you want — naming the route
+route (**+ Add provider** in the UI, or a `config.routes` entry on the
+profile's `cordis.patch.yml` modelspoke entry) with the name and base URL
+you want — naming the route
 onto the block's own key keeps id continuity; while the block remains, it
 SHADOWS a same-named route until removed (the batch registration is
 all-or-nothing) — then delete the block (Settings → Models). The API key
@@ -955,7 +959,7 @@ test/e2e/e2e.test.mjs` or `pnpm e2e`), a scratch root in tmpdir — a scratch
 `DSH_HOME` (a copy of the live `~/.dsh/profiles/web` + a freshly
 auto-initialized headless profile with modelspoke attached as a repo
 symlink) and the fake llama-swap on free ports with its own generated
-config (settings.yaml written per phase) — a pinned dsh (the `DSH_VERSION`
+config (the profile's `cordis.patch.yml` written per phase) — a pinned dsh (the `DSH_VERSION`
 constant; the selectors ride on dsh's own web UI, so a dsh bump breaks them
 silently — the runner fails loud at the boundary), playwright-core driving
 `dsh web`, and headless one-shot turns. Nothing touches the live `~/.dsh`
