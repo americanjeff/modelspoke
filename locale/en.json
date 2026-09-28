@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Modelspoke",
+    "description": "Configure local models and providers with auto-discovery of reasoning effort, image input and context size."
+  }
+}

@@ -251,12 +251,22 @@ identity — `id`, `match`, `notes?` — plus a partial pi-ai `Model`:
 - `thinkingLevelMap?` — pi-ai's raw form: `null` marks a level unsupported,
   non-null selectable. Canonical spelling DROPS null entries (they're stripped
   at every tier→canonical boundary); the `off` entry is spelled
-  `off: "low"` canonically (non-null so it's selectable; its value is moot
-  under `omitWhenOff`). On the RESOLVED object, present-empty `{}` is the
-  explicit-none (nothink) state — see User config.
+  `off: "low"` canonically (non-null so it's selectable). The off VALUE is
+  the wire's OFF SWITCH: the wire re-spelling keeps it verbatim and pi-ai
+  dispatches it when no level is requested (the Ollama family tables spell it
+  `off: "none"` — the server-side thinking-off token; under a chat-template
+  kwarg path it is moot, `omitWhenOff` dropping the effort kwarg first). On
+  the RESOLVED object, present-empty `{}` is the explicit-none (nothink)
+  state — see User config.
 - `compat?` — pi-ai's `OpenAICompletionsCompat` verbatim. `thinkingFormat`
   lives **inside** `compat` (that's where pi-ai puts it); there is no
-  top-level `thinkingFormat`.
+  top-level `thinkingFormat`. A compat whose SOURCE is the default tier is
+  the resolver's conservative filler, not a declaration: the dsh adapter
+  omits the wire model's `compat` key in that case (src/dsh/pi-model.ts
+  `buildPiModel` `compatSource`) so pi-ai's own openai-completions detection
+  applies — the discovery backends emit no compat of their own (C5) and their
+  `reasoning_effort` wire values are dispatched under the detected
+  `supportsReasoningEffort: true`.
 
 Presets carry **no display name** (a family-level preset would give every
 matching model the same picker name). Display name = discovery's `name` when
@@ -299,6 +309,26 @@ Host adapters are thin shims:
     didn't list; a discovery failure degrades to the remaining tiers rather
     than rejecting). `info.id` equals the requested model (the
     `normalizeModelInfo` contract); the built pi-ai Model carries the wire id.
+  - **Discovery runs the backend registry scan** (src/dsh/adapter.ts
+    `discoverEnriched`): each catalog pass (memoized 60s per route, evicted
+    on a failed fetch) is `fetchModels` + the same registry order the
+    channel's `discoverMetadata` uses (src/discovery/backends.ts) — the
+    probes are cheap (≤1 fetch per backend, all fail-soft, C6/C10) and a
+    definitive non-match is harmless, so the adapter pays the scan on every
+    re-discovery rather than maintaining a second persistent detection memo
+    (the 60s TTL covers the cadence). The first DEFINITIVE match's
+    `metadataRows` owns the enrichment (C2/C4: per-id FULL replacement of
+    `discoveredCanonical`; ids left un-enriched keep the generic row); no
+    match — or a degraded backend — keeps the generic rows. This is why the
+    settings card and the session AGREE: both surfaces resolve through the
+    same tier-2 rows (the reported bug was the adapter never running the
+    scan — the card enriched, the session didn't). One reconciliation the
+    scan makes possible: a reasoning declaration with NO selectable levels
+    (e.g. an Ollama `thinking` capability whose family the tables don't
+    cover) is served WITHOUT the dimension — a zero-level dimension is not
+    expressible (`normalizeModelInfo` rejects empty efforts) and a requested
+    effort clamps to `off` (sends nothing → the server default thinking
+    applies), which is exactly the no-dimension semantics.
   - `prepareCall` — the **generation freeze**: route facts (baseURL, key env)
     + the resolution + the built pi-ai Model are captured in one generation so
     a settings change between preparation and dispatch cannot mix one
@@ -360,10 +390,12 @@ off that the `{$var: thinking.enabled}` binding resolves to with no effort —
 `enable_thinking: false`, live-verified on the wire). No declared kwargs ⇒ no
 wire intent ⇒ unchanged (never silently invent a wire parameter); no other
 `thinkingFormat` is touched. `wireThinkingLevelMap` re-spells the canonical
-map as the raw pi-ai wire form (absent → pinned `null`, offered `off` → key
-absent, others verbatim) plus the shim case: the wire model is reasoning but
-offers no selectable level, so pi-ai's supported levels are exactly
-`["off"]` — the nothink presentation carried on an open wire gate.
+map as the raw pi-ai wire form (absent → pinned `null`; offered levels —
+`off` included — kept verbatim, the off value being the wire's OFF SWITCH
+pi-ai dispatches when no level is requested) plus the shim case: the wire
+model is reasoning but offers no selectable level, so pi-ai's supported
+levels are exactly `["off"]` — the nothink presentation carried on an open
+wire gate.
 
 ### Image handling
 
@@ -590,13 +622,14 @@ section, reachable through the open settings slots any loaded client plugin
 can register into (the web app has no URL router — slots ARE the entry
 surface):
 
-- **`settings.plugin.item`** (key `modelspoke`) — the editor's home: an
-  expandable card in the Plugins settings page's Plugin configuration tab
-  (the tab dispatches the slot per served namespace — the out-of-repo
-  extension point). The card draws its own disclosure header (the in-box
-  card chrome is CSS-module-bound and cannot be imported as values — the
-  bundle-purity gate) and keeps the section body MOUNTED while collapsed, so
-  in-flight provider drafts and open model details survive a collapse.
+- **`plugins.bundle.config`** (key = the package name) — the editor's home,
+  rendered on the plugin's BUNDLE DETAIL page (sidebar Plugins → "View
+  modelspoke"), between the page's description and the Components rows: a
+  bare list item (no disclosure, no panel chrome — the page header carries
+  the name and description; `data-modelspoke="card"` is the e2e/screenshot
+  anchor). The section's chrome is plain-element inline styles, the in-box
+  card module CSS's geometry ported token-for-token (the bundle-purity gate
+  forbids importing it as values).
 - Wiring: route/override writes via `settings.mutate` + `settingsScope`
   (whole-array / whole-field sets with `expectedRevision` fencing and
   post-settlement read-back verification); live updates via the scope's
@@ -638,7 +671,10 @@ tokens, which resolve at runtime inside the same settings dialog.
   context window, max output tokens, a Capabilities group ("Image input",
   "Reasoning effort" — OFF = the nothink sentinel), the reasoning-effort map
   below it (harness level × model value rows, +/− buttons), and a per-model
-  Default-effort select. Every untouched field is seeded from the effective
+  Default-effort select (options = the full level vocabulary: "off" =
+  off-by-default — the dimension stays offered, the dispatch sends nothing;
+  the NO-dimension state is the "Reasoning effort" checkbox's, not a
+  default). Every untouched field is seeded from the effective
   entry (preset shown as the seed, never committed as a preset value —
   semantic dirty tracking, phantom-free writes). Deep `compat` fields
   (thinkingFormat, `chatTemplateKwargs` `$var` blocks) stay hand-edited YAML:
@@ -825,7 +861,7 @@ shows demand (v1.0 candidate).
 |---|---|
 | Route naming | User-chosen route keys via `registerConfigurableProviders`. The UI speaks "providers"; the yaml key keeps its historical name (`routes:`). |
 | Model identity | `name` = the harness identity (selector key, per-model config key; unique within a provider); `id` = the wire id (editable, catalog-combobox or typed; duplicates allowed as named variants). The resolver runs on the wire id; dispatch carries the wire id. |
-| Default effort | Per-model only (`models[].defaultEffort`; on FULL_CATALOG routes the field lives on the model's per-route override entry). The provider-level `defaultEffort` was removed (a provider default is a silent behavior that varies per model). **Runtime resolution is pi parity**: per-request effort > per-model default > the built-in fallback `medium` (pi's `DEFAULT_THINKING_LEVEL`), then clamped to the model's offered levels (pi-ai's `clampThinkingLevel` - nearest offered level, walking outward). A thinking model never dispatches without an effort; a non-thinking resolution clamps to `off` (nothing sent); modelspoke never rejects an effort - it clamps. |
+| Default effort | Per-model only (`models[].defaultEffort`; on FULL_CATALOG routes the field lives on the model's per-route override entry). The provider-level `defaultEffort` was removed (a provider default is a silent behavior that varies per model). **Runtime resolution is pi parity**: per-request effort > per-model default > the built-in fallback `medium` (pi's `DEFAULT_THINKING_LEVEL`), then clamped to the model's offered levels (pi-ai's `clampThinkingLevel` - nearest offered level, walking outward). A thinking model never dispatches without an effort; a non-thinking resolution clamps to `off` (nothing sent); modelspoke never rejects an effort - it clamps. **An explicit `defaultEffort: off` is legal** (off-by-default: the dimension stays offered, the runtime preselects it, the dispatch sends nothing — the NO-dimension state is the nothink sentinel, not a default); the detail's select offers it. A built-in fallback that clamps to `off` is NOT reported as a default (there is no effort to pin). |
 | Override config | Per-agent, plugin-owned namespace; DUAL SHAPE — `routes[].overrides` is the home, top-level `overrides:` is legacy-but-read; per field the route's entry wins; the first web-UI write folds the legacy map in (mechanical, silent, lossless, phantom-inverse-stripped). |
 | Served set | Per-route `models` entries: presence = served; absent/`[]` = full catalog. (Promoted from the "12 extra models" annoyance found during testing.) |
 | nothink | `thinkingLevelMap: "none"` string sentinel → the resolver expands to `reasoning: false` + present-empty map, both sourced `user`; the wire shim (BUG-001/002) makes it send the explicit `enable_thinking: false` on think-by-default templates. |
@@ -834,7 +870,7 @@ shows demand (v1.0 candidate).
 | `metadataSource` surfacing | Resolve-time log line (per-field) + model `description` suffix + the UI's per-field tier labels. (The dsh distro has no node-side plugin log sink — tracked upstream.) |
 | Presets | Per-template, conservative, overridable, attributed. Four entries (3.8 / 3.6 / 3.5 / gpt-oss); Qwen3-Coder-Next = NO preset (the default tier is correct for it). Provenance-pinned (hub AND GGUF copies) + `drift-check` / `preset-draft` tooling; the tool drafts, a human commits. |
 | First-use import | RETIRED (both paths): the v1 onboarding step's trigger was too narrow to be worth keeping (a fresh install got a silent no-op), and the deep config-import path's seeded values were identical to the live discovery values. Migration is manual — add the modelspoke route, then delete the source block (shadowing until then, all-or-nothing registration). Cross-host (pi) import deferred (pi build parked — see the pi adapter row). |
-| Client UI | A dual-face Cordis plugin — standalone, zero dsh changes. `settings.plugin.item` entry point (the expandable card on the Plugins settings page, keyed on the `modelspoke` namespace); the `/modelspoke` loopback RPC channel for the discovered-catalog metadata (connection read lazily — a silent no-op without a web profile). |
+| Client UI | A dual-face Cordis plugin — standalone, zero dsh changes. The `plugins.bundle.config` slot (keyed on the package name) — the editor's bare panel on the bundle detail page (sidebar Plugins → View modelspoke); the `/modelspoke` loopback RPC channel for the discovered-catalog metadata (connection read lazily — a silent no-op without a web profile). |
 | Package faces | `.` = the dsh plugin entry (Option A repackage); `./client` = the web bundle; `./lib` = the framework-neutral core (stability boundary, pre-1.0). The host deps are optional peers. |
 | pi adapter | **Parked (owner decision, 2026-09-01): removed from the 0.1.0 package.** Code-complete, and the `pi -e` activation check passed before removal (pi 0.84.2, live llama-swap — 15 models listed). Revive on an explicit build decision. |
 | Matching | Catalog-ordered first match, most-specific first, unanchored case-insensitive regex. |
@@ -936,18 +972,26 @@ discipline (catalog-first, at most ONE fetch) is kept; this only avoids a
 fetch the catalog proves futile, and it is what keeps the pre-existing
 channel fetch-count contract green without touching test/channel.test.ts (C3).
 
-### src/dsh/channel.ts — the backend scan
+### The backend scan (channel `discoverMetadata` + the adapter's discovery)
 
-The discovery-backend registry scan (`discoverMetadata`): the route is
-probed against src/discovery/backends.ts (SGLang, Ollama, LM Studio,
-llama.cpp llama-server, vLLM — locked order); each backend's detection is
-memoized per route identity × backend (inconclusive verdicts evict and
-retry), the scan stops at the first DEFINITIVE match, and the matched
-backend's `metadataRows` REPLACES `discoveredCanonical` per enriched id
-(the registry's FULL-replacement semantics — ids left un-enriched keep the generic
-row). No match — or a backend that degrades (backends are fail-soft, C6) —
-keeps the generic rows as-is; the endpoint fails only when the `/v1/models`
-fetch failed.
+The discovery-backend registry scan: the route is probed against
+src/discovery/backends.ts (SGLang, Ollama, LM Studio, vLLM, llama.cpp
+llama-server — locked order); the scan stops at the first DEFINITIVE match,
+and the matched backend's `metadataRows` REPLACES `discoveredCanonical` per
+enriched id (the registry's FULL-replacement semantics — ids left un-enriched
+keep the generic row). No match — or a backend that degrades (backends are
+fail-soft, C6) — keeps the generic rows as-is.
+
+Two callers run the same registry. The **channel** (`discoverMetadata`, the
+`/metadata` RPC — the settings card's surface) memoizes each backend's
+detection per route identity × backend (inconclusive verdicts evict and
+retry); the endpoint fails only when the `/v1/models` fetch failed. The
+**dsh adapter** (its `discoverEnriched`, the session's surface) runs the scan
+on every catalog pass under the 60s discovery TTL — no separate persistent
+detection memo: the probes are ≤1 fetch each, fail-soft, and a definitive
+non-match costs nothing (see the dsh adapter bullet under "Host adapters are
+thin shims"). Both surfaces resolving through the same tier-2 rows is what
+keeps the settings card and the session in agreement.
 
 ### test/e2e/ — suite structure, run prerequisites, uncovered manual journeys
 

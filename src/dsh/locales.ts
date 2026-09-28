@@ -555,16 +555,6 @@ const STRINGS = {
     zh: "删除顶层 override \"{id}\"？没有任何提供方为它配置了自有条目，删除后该模型的配置重新从服务器发现 / 预设 / 默认值解析。",
   },
 
-  /** The Plugins-page card's disclosure header (ModelspokeCard in
-   *  client.tsx) — name + description, the in-box card chrome pattern. */
-  pluginCardTitle: {
-    en: "Modelspoke",
-    zh: "Modelspoke",
-  },
-  pluginCardDescription: {
-    en: "Local OpenAI-compatible model servers — providers, models, and per-model configuration.",
-    zh: "本地 OpenAI 兼容模型服务器 — 提供方、模型与逐模型配置。",
-  },
 } satisfies Record<string, LocalizedString>;
 
 /** The typed key set (compile-time: a misspelled key is a type error). */

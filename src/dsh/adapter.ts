@@ -30,10 +30,14 @@ import type {
 import type { Model as PiModel, ModelThinkingLevel } from "@earendil-works/pi-ai";
 import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
 import { clampThinkingLevel } from "@earendil-works/pi-ai";
-import { discoverModels } from "../discovery/index.js";
+import { discoveryBackends } from "../discovery/backends.js";
+import type { DiscoveryContext } from "../discovery/backends.js";
+import { fetchModels } from "../discovery/client.js";
+import { extractFromEntry } from "../discovery/metadata.js";
 import { normalizeRouteBaseUrl } from "../discovery/url.js";
 import { resolveModel } from "../resolve/index.js";
 import type {
+  CanonicalModelFields,
   DiscoveryModelInfo,
   FieldSource,
   FieldSourceMap,
@@ -147,10 +151,16 @@ export class ModelspokeAdapter extends LlmAdapter {
   }
 
   /**
-   * Memoized `/v1/models` per route identity (baseURL + key env). A failed
-   * fetch is evicted so the next call retries; a successful catalog is kept
-   * for DISCOVERY_TTL_MS, after which the next resolve re-fetches. The
-   * memoized promise outlives any single caller's signal by design.
+   * Memoized DISCOVERY per route identity (baseURL + key env): the
+   * `/v1/models` catalog enriched by the DISCOVERY BACKEND REGISTRY scan
+   * (C2) — the SAME tier-2 enrichment the channel's `discoverMetadata`
+   * applies for the settings card (src/dsh/channel.ts), so the session's
+   * effort controls agree with what the card shows. A failed pass is
+   * evicted so the next call retries; a successful catalog is kept for
+   * DISCOVERY_TTL_MS, after which the next resolve re-fetches (the scan
+   * re-runs on the same cadence — its probes are cheap: at most one fetch
+   * per backend per pass, and the catalog-derived backends fetch nothing).
+   * The memoized promise outlives any single caller's signal by design.
    */
   private discover(route: ModelspokeRoute, signal?: AbortSignal): Promise<DiscoveryModelInfo[]> {
     const key = `${normalizeRouteBaseUrl(route.baseURL)}\u0000${route.apiKeyEnv ?? ""}`;
@@ -159,12 +169,71 @@ export class ModelspokeAdapter extends LlmAdapter {
       return entry.promise;
     }
     if (entry) this.discovery.delete(key); // TTL expired — re-fetch
-    const promise = discoverModels(route, signal).catch((error) => {
+    const promise = this.discoverEnriched(route, signal).catch((error) => {
       this.discovery.delete(key);
       throw error;
     });
     this.discovery.set(key, { promise, at: Date.now() });
     return promise;
+  }
+
+  /**
+   * One full discovery pass for a route: `GET /v1/models` + the registry
+   * scan. C2: each backend's verdict is consulted in registry order — the
+   * first DEFINITIVE match owns the enrichment; a definitive non-match
+   * keeps scanning ("not Ollama" is not "not vLLM"); an INCONCLUSIVE probe
+   * keeps scanning (no answer is not evidence, C10). The matched backend's
+   * `byId` REPLACES `discoveredCanonical` per enriched id (C4 FULL
+   * replacement: a present key = enriched — even with `undefined`,
+   * "enriched, nothing found" — while an id the backend left un-enriched
+   * keeps its generic row), and its `notes` are logged under the route
+   * line. No match at all — or a backend that degrades (backends are
+   * fail-soft, C6; this catch is belt and braces) — keeps the generic
+   * rows. The catalog fetch itself still rejects (the caller's contract:
+   * the catalog is genuinely unavailable).
+   */
+  private async discoverEnriched(route: ModelspokeRoute, signal?: AbortSignal): Promise<DiscoveryModelInfo[]> {
+    const baseUrl = normalizeRouteBaseUrl(route.baseURL);
+    const apiKey = route.apiKeyEnv ? process.env[route.apiKeyEnv] || undefined : undefined;
+    const entries = await fetchModels(baseUrl, apiKey, signal);
+    const generic = entries.map(extractFromEntry);
+    const ctx: DiscoveryContext = {
+      baseUrl,
+      ...(apiKey !== undefined ? { apiKey } : {}),
+      ...(signal !== undefined ? { signal } : {}),
+      entries,
+    };
+    let byId: Map<string, CanonicalModelFields | undefined> | undefined;
+    for (const backend of discoveryBackends) {
+      const verdict = await backend.detect(ctx);
+      if (verdict.inconclusive || !verdict.match) continue;
+      try {
+        const rows = await backend.metadataRows(entries, ctx, verdict.facts);
+        byId = rows.byId;
+        for (const note of rows.notes ?? []) {
+          this.log(`modelspoke: discovery for route "${route.name}": ${note}`);
+        }
+      } catch (error) {
+        // A backend NEVER throws (C6) — belt and braces: degrade to the
+        // generic rows rather than fail discovery.
+        this.log(
+          `modelspoke: discovery for route "${route.name}": backend "${backend.id}" failed: ` +
+            `${error instanceof Error ? error.message : String(error)}`,
+        );
+        byId = new Map();
+      }
+      break; // the first definitive match owns the enrichment (C2)
+    }
+    if (byId === undefined) return generic;
+    return generic.map((row) => {
+      if (!byId.has(row.id)) return row;
+      const enriched = byId.get(row.id);
+      return {
+        id: row.id,
+        ...(row.name !== undefined ? { name: row.name } : {}),
+        ...(enriched !== undefined ? { discoveredCanonical: enriched } : {}),
+      };
+    });
   }
 
   /**
@@ -310,7 +379,14 @@ export class ModelspokeAdapter extends LlmAdapter {
     // The nothink marker rides to the WIRE model (the BUG-001/002 shim —
     // src/resolve/wire.ts); the DECLARED dimension below (info.reasoning,
     // the effort machinery) stays keyed on resolved.reasoning.
-    const piModel = buildPiModel(identity.wireId, resolved, name, route, resolution.nothink === true);
+    const piModel = buildPiModel(
+      identity.wireId,
+      resolved,
+      name,
+      route,
+      resolution.nothink === true,
+      sources.compat,
+    );
     const info: LlmResolvedModelInfo = {
       provider,
       // The dsh-llm runtime validates `resolved.id === model` — the
@@ -330,23 +406,40 @@ export class ModelspokeAdapter extends LlmAdapter {
     };
     if (resolved.reasoning) {
       const levels = offeredLevels(piModel);
-      // Pi parity: every thinking model carries a determinable default
-      // - the per-model `defaultEffort` (explicit entry or per-route
-      // override) wins, else the built-in fallback (pi's session
-      // default). Both are clamped to the offered levels (pi-ai's
-      // `clampThinkingLevel`); a clamp landing on "off" is omitted.
-      const perModel = identity.perModelEffort;
-      const fallback = clampThinkingLevel(
-        piModel,
-        (perModel ?? FALLBACK_THINKING_LEVEL) as ModelThinkingLevel,
-      );
-      info.reasoning = {
-        efforts: levels.map((level) => ({
-          id: ReasoningEffortId(level),
-          name: level.charAt(0).toUpperCase() + level.slice(1),
-        })),
-        ...(fallback === "off" ? {} : { defaultEffort: ReasoningEffortId(fallback) }),
-      };
+      // A reasoning model with NO selectable level — an Ollama thinking
+      // model the family tables don't cover (or the decision-7 gate dropped
+      // the map): the dsh-llm contract requires non-empty `reasoning.efforts`,
+      // and a dimension with zero selectable levels is not expressible.
+      // Serve it WITHOUT the dimension: the dispatch sends no effort (the
+      // clamp below lands on `off`), so the server's own default thinking
+      // applies — and the card agrees (its Reasoning-effort capability is
+      // the effective map, which is empty here).
+      if (levels.length > 0) {
+        // Pi parity: every thinking model carries a determinable default
+        // - the per-model `defaultEffort` (explicit entry or per-route
+        // override) wins, else the built-in fallback (pi's session
+        // default). Both are clamped to the offered levels (pi-ai's
+        // `clampThinkingLevel`). An EXPLICIT per-model value is always
+        // reported — including "off": off-by-default with the dimension
+        // still offered (the runtime preselects it; the dispatch sends
+        // nothing). The nothink sentinel — the NO-dimension state — is
+        // the checkbox's, never a default. Only the built-in fallback
+        // omits a clamp landing on "off" (a model offering no level at
+        // all offers off alone — there is no effort to pin).
+        const perModel = identity.perModelEffort;
+        const clamped = clampThinkingLevel(
+          piModel,
+          (perModel ?? FALLBACK_THINKING_LEVEL) as ModelThinkingLevel,
+        );
+        const reported = perModel === undefined && clamped === "off" ? undefined : clamped;
+        info.reasoning = {
+          efforts: levels.map((level) => ({
+            id: ReasoningEffortId(level),
+            name: level.charAt(0).toUpperCase() + level.slice(1),
+          })),
+          ...(reported === undefined ? {} : { defaultEffort: ReasoningEffortId(reported) }),
+        };
+      }
     }
     return { info, piModel };
   }

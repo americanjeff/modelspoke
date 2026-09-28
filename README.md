@@ -56,7 +56,7 @@ Prerequisite: dsh **0.1.7** (verified against 0.1.7-rc.1) with the
 3. **Open the Modelspoke settings card.** In the dsh web UI, select
    **Plugins** in the left sidebar, open the **modelspoke** row in the
    Installed group — the Modelspoke card renders on its bundle detail
-   page. Expand the card, then **+ Add provider**:
+   page, then **+ Add provider**:
 
    ![Settings → Plugins → Modelspoke card — the provider row and the provider card](docs/screenshots/modelspoke-01-section.png)
 

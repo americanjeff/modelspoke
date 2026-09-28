@@ -165,11 +165,6 @@ describe("en identity: t('en', …) is the EXACT original client.tsx string", ()
       { keys: "mystery, compat" },
       "deep template fields present (mystery, compat) — edit in the profile's `cordis.patch.yml`",
     ],
-    [
-      "pluginCardDescription",
-      undefined,
-      "Local OpenAI-compatible model servers — providers, models, and per-model configuration.",
-    ],
   ];
 
   for (const [key, args, expected] of cases) {

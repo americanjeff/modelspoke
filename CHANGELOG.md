@@ -4,6 +4,26 @@ Coarse and consumer-facing — the kind of thing a dsh user or a `./lib`
 consumer can act on. Build-internal work (tests, comments, docs) does not
 belong here.
 
+## 0.3.1 — 2026-09-27
+
+- **Fixed: the session now gets the capabilities the provider card already
+  showed** — the session's model resolution skipped the backend-registry
+  scan the settings card runs, so a model like `glm-5.3-flash:cloud` on an
+  Ollama route listed its full reasoning-effort map, image input, and 1M
+  context window on the card while the session resolved the same model on
+  defaults: no reasoning-effort control in the session, `read_image`
+  refusing with "does not declare image input", and a silent 256K context
+  fallback. Card and session resolve through the same discovery tier now
+  (equally for SGLang / vLLM / LM Studio / llama.cpp routes). A thinking
+  model the built-in tables don't cover simply offers no effort control —
+  the server's own default thinking applies.
+- **Fixed: "Off" actually turns thinking off on Ollama models** — selecting
+  Off dispatched no effort at all, so the server default applied (`max`
+  thinking on `glm-5.3-flash:cloud`); Off now sends the model's own off
+  spelling (`reasoning_effort: "none"`).
+- **The settings card is flat** — no expand/collapse, no boxed panel: the
+  providers section renders directly on the plugin page, open on arrival.
+
 ## 0.3.0 — 2026-09-23
 
 - **The host requirement is now dsh 0.1.7** (breaking) — modelspoke loads

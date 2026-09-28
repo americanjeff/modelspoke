@@ -1,8 +1,8 @@
 {
   "name": "modelspoke",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "license": "MIT",
-  "description": "Local OpenAI-compatible model-server discovery + tiered reasoning-metadata resolution for DeepSeek Harness (dsh).",
+  "description": "Configure local models and providers with auto-discovery of reasoning effort, image input and context size.",
   "author": "American Jeff <jeff@americanjeff.com>",
   "homepage": "https://github.com/americanjeff/modelspoke",
   "repository": {
@@ -43,11 +43,13 @@
       "types": "./dist/lib.d.ts",
       "default": "./dist/lib.js"
     },
+    "./locale/*.json": "./locale/*.json",
     "./package.json": "./package.json",
     "./dist/*": "./dist/*"
   },
   "files": [
     "dist",
+    "locale/*.json",
     "dsh.cordis.yml",
     "assets/logo",
     "docs/screenshots"

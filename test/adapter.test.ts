@@ -11,8 +11,10 @@
  * - the entry's own config is tier 1 (beats discovery);
  * - effort is pi-parity: the per-model `defaultEffort` (explicit entry or
  *   FULL_CATALOG per-route entry) wins over the built-in fallback
- *   (medium), clamped to the offered levels; non-reasoning models never
- *   materialize one.
+ *   (medium), clamped to the offered levels; an explicit value is always
+ *   reported — including "off" (off-by-default, the dimension stays
+ *   offered) — while a fallback clamp landing on "off" stays omitted;
+ *   non-reasoning models never materialize one.
  *
  * The wire payload itself is covered by wire-capture.test.ts.
  */
@@ -30,9 +32,12 @@ const CATALOG = [FLAGSHIP, GEMMA, "extra-1"];
 
 let server: http.Server;
 let baseUrl = "";
+/** Every request path the mock saw — the registry-scan probe assertions. */
+const hits: string[] = [];
 
 beforeAll(async () => {
   server = http.createServer((req, res) => {
+    hits.push(req.url ?? "");
     if (req.url === "/v1/models") {
       res.writeHead(200, { "content-type": "application/json" });
       res.end(
@@ -173,16 +178,43 @@ describe("defaultEffort — the determinable per-model default (pi parity)", () 
     expect(info.reasoning?.defaultEffort).toBe("xhigh");
   });
 
-  it("an off-vocabulary effort clamps to the lowest offered level (pi rule)", async () => {
+  it("an off-vocabulary effort clamps to the lowest offered level (pi rule) and reports it", async () => {
     // "xlow" is not a canonical level: pi's clampThinkingLevel falls back
     // to the lowest offered level — the flagship's map offers `off`, so
-    // the default clamps to "off" and is omitted.
+    // the default clamps to "off". An explicit value is always reported
+    // (the dispatch clamps to off too — nothing is sent — so the reported
+    // default matches what the call actually does).
     const adapter = makeAdapter({
       models: [{ name: "A", id: FLAGSHIP, defaultEffort: "xlow" }],
     });
     const info = await adapter.resolveModel("ms", "A");
-    expect(info.reasoning?.defaultEffort).toBeUndefined();
+    expect(info.reasoning?.defaultEffort).toBe("off");
     expect(info.reasoning?.efforts.map((l) => l.id)).not.toContain("xlow");
+  });
+
+  it("an explicit off default reports off (off-by-default: the dimension stays offered)", async () => {
+    const adapter = makeAdapter({
+      models: [{ name: "A", id: FLAGSHIP, defaultEffort: "off" }],
+    });
+    const info = await adapter.resolveModel("ms", "A");
+    expect(info.reasoning?.defaultEffort).toBe("off");
+    // The dimension STAYS — the nothink sentinel (the checkbox's state) is
+    // the no-dimension state, never a default.
+    expect(info.reasoning?.efforts.map((l) => l.id)).toEqual(["off", "low", "medium", "xhigh"]);
+  });
+
+  it("the built-in fallback landing on off stays omitted (a level-less model offers off alone)", async () => {
+    // The entry's tier-1 map offers ONLY off (the degenerate on/off form
+    // the qwen3.5/3.6 presets use); with no per-model default the
+    // built-in "medium" clamps to the lone offered level, off — and a
+    // fallback landing on off is not an effort to pin, so it is omitted
+    // (the dispatch clamps to off anyway — nothing is sent).
+    const adapter = makeAdapter({
+      models: [{ name: "A", id: FLAGSHIP, thinkingLevelMap: { off: "low" } }],
+    });
+    const info = await adapter.resolveModel("ms", "A");
+    expect(info.reasoning?.defaultEffort).toBeUndefined();
+    expect(info.reasoning?.efforts.map((l) => l.id)).toEqual(["off"]);
   });
 
   it("a non-reasoning model never materializes a default effort", async () => {
@@ -204,6 +236,12 @@ describe("defaultEffort — the determinable per-model default (pi parity)", () 
     });
     const info2 = await overridden.resolveModel("ms", FLAGSHIP);
     expect(info2.reasoning?.defaultEffort).toBe("xhigh");
+    // An explicit "off" per-route default wins too (off-by-default).
+    const offDefault = makeAdapter({
+      overrides: { [FLAGSHIP]: { defaultEffort: "off" } },
+    });
+    const info3 = await offDefault.resolveModel("ms", FLAGSHIP);
+    expect(info3.reasoning?.defaultEffort).toBe("off");
   });
 });
 
@@ -220,5 +258,118 @@ describe("LlmError contract", () => {
       );
     expect(error).toBeInstanceOf(LlmError);
     expect((error as LlmError).code).toBe("NO_MODEL");
+  });
+});
+
+describe("backend registry scan — the runtime tier-2 enrichment (the session agrees with the card)", () => {
+  const GLM = "glm-5.3-flash:cloud";
+  const KIMI = "kimi-k3:cloud";
+
+  let ollamaServer: http.Server;
+  let ollamaBaseUrl = "";
+
+  beforeAll(async () => {
+    // A live Ollama's bare `/v1/models` shape (id/object only) + the native
+    // surface: a dotted /api/version and one /api/show per model — the cloud
+    // glm family (family `glm5_next`, vision, the glm family table) and an
+    // UNLISTED cloud family (thinking capability, no family-table entry).
+    ollamaServer = http.createServer((req, res) => {
+      if (req.url === "/v1/models") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ object: "list", data: [GLM, KIMI].map((id) => ({ id, object: "model" })) }));
+        return;
+      }
+      if (req.url === "/api/version") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ version: "0.34.4" }));
+        return;
+      }
+      if (req.url === "/api/show" && req.method === "POST") {
+        let body = "";
+        req.on("data", (chunk) => (body += chunk));
+        req.on("end", () => {
+          const { model } = JSON.parse(body) as { model: string };
+          const show =
+            model === GLM
+              ? {
+                  capabilities: ["completion", "thinking", "tools", "vision"],
+                  details: { format: "", family: "glm5_next", parameter_size: "130B", quantization_level: "BF16" },
+                  model_info: { "glm5_next.context_length": 1048576 },
+                  modified_at: "2026-08-13T08:00:00-07:00",
+                }
+              : {
+                  capabilities: ["completion", "tools", "thinking"],
+                  details: { format: "", family: "kimi3", parameter_size: "100B", quantization_level: "FP8" },
+                  model_info: { "kimi3.context_length": 131072 },
+                  modified_at: "2026-08-13T08:00:00-07:00",
+                };
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify(show));
+        });
+        return;
+      }
+      res.writeHead(404, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: "not found" }));
+    });
+    await new Promise<void>((resolve) => ollamaServer.listen(0, "127.0.0.1", resolve));
+    ollamaBaseUrl = `http://127.0.0.1:${(ollamaServer.address() as AddressInfo).port}/v1`;
+  });
+
+  afterAll(async () => {
+    await new Promise<void>((resolve, reject) =>
+      ollamaServer.close((err) => (err ? reject(err) : resolve())),
+    );
+  });
+
+  function makeOllamaAdapter(route: Record<string, unknown>): ModelspokeAdapter {
+    return new ModelspokeAdapter({
+      settings: () => ({
+        routes: [{ name: "ollama", baseURL: ollamaBaseUrl, ...route }],
+        overrides: {},
+      }),
+      log: () => {},
+    });
+  }
+
+  it("an Ollama route: the /api/show enrichment reaches resolveModel (the effort control the card already shows)", async () => {
+    const adapter = makeOllamaAdapter({ models: [{ name: "glm", id: GLM }] });
+    const info = await adapter.resolveModel("ollama", "glm");
+    expect(info.inputModalities).toEqual(["text", "image"]); // the vision capability
+    expect(info.context?.contextWindow).toBe(1048576); // the family context_length
+    // The cloud glm family table (null entries canonicalized away): the
+    // offered levels, in pi-ai's canonical order.
+    expect(info.reasoning?.efforts.map((l) => l.id)).toEqual(["off", "low", "medium", "high", "max"]);
+    expect(info.reasoning?.efforts.map((l) => l.name)).toEqual(["Off", "Low", "Medium", "High", "Max"]);
+    expect(info.reasoning?.defaultEffort).toBe("medium"); // the built-in fallback, offered
+    // The source contract names the discovery tier for every enriched field.
+    expect(info.description).toContain("reasoning: discovery");
+    expect(info.description).toContain("thinkingLevelMap: discovery");
+    expect(info.description).toContain("input: discovery");
+    expect(info.description).toContain("contextWindow: discovery");
+  });
+
+  it("a thinking model the family tables don't cover: NO dimension (a zero-level dimension is not expressible)", async () => {
+    const adapter = makeOllamaAdapter({ models: [{ name: "kimi", id: KIMI }] });
+    const info = await adapter.resolveModel("ollama", "kimi");
+    expect(info.reasoning).toBeUndefined(); // zero selectable levels → no dimension, no throw
+    expect(info.inputModalities).toEqual(["text"]); // no vision capability
+    expect(info.context?.contextWindow).toBe(131072); // the discovered context still applies
+  });
+});
+
+describe("backend registry scan — a bare catalog (every probe 404s: definitive non-match)", () => {
+  it("the registry scans (the probes fire) and the generic rows hold (C6/C10: no match, no crash)", async () => {
+    const adapter = makeAdapter({ models: [{ name: "G", id: GEMMA }] });
+    const before = hits.length;
+    const info = await adapter.resolveModel("ms", "G");
+    expect(info.reasoning).toBeUndefined(); // no preset, no backend claim → the default tier
+    expect(info.context?.contextWindow).toBe(262144); // the fallback (no tier supplied)
+    const fresh = hits.slice(before);
+    // The scan consulted the registry in locked order — these probes 404ed
+    // (C10: a definitive non-match each) and the pass degraded to generic.
+    expect(fresh).toContain("/model_info"); // sglang
+    expect(fresh).toContain("/api/version"); // ollama
+    expect(fresh).toContain("/api/v1/models"); // lmstudio
+    expect(fresh).toContain("/props"); // llamacpp
   });
 });

@@ -64,7 +64,7 @@ modelspoke 的角色是标出哪些模型能够接收图像。
 
 3. **打开 Modelspoke 设置卡片。** 在 dsh web UI 中，在左侧栏选择
    **Plugins**，在 Installed 分组中打开 **modelspoke** 行 —— Modelspoke
-   卡片渲染在其 bundle 详情页上。展开卡片，然后 **+ Add provider**：
+   卡片渲染在其 bundle 详情页上，然后 **+ Add provider**：
 
    ![Settings → Plugins → Modelspoke 卡片 — 提供方行与提供方卡片](docs/screenshots/modelspoke-01-section.png)
 

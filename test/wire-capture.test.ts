@@ -94,6 +94,8 @@ const KEY_ENV = "MODEL_SPOKE_WIRE_TEST_KEY";
 interface RouteSpec {
   name: string;
   apiKeyEnv?: string;
+  /** The route's committed per-wire-id config map (FULL_CATALOG tier 1). */
+  overrides?: Record<string, unknown>;
 }
 
 function makeAdapter(route: RouteSpec, store?: AttachmentReader): ModelspokeAdapter {
@@ -104,6 +106,7 @@ function makeAdapter(route: RouteSpec, store?: AttachmentReader): ModelspokeAdap
           name: route.name,
           baseURL: baseUrl,
           ...route.apiKeyEnv === undefined ? {} : { apiKeyEnv: route.apiKeyEnv },
+          ...route.overrides === undefined ? {} : { overrides: route.overrides },
         },
       ],
       overrides: {},
@@ -265,6 +268,52 @@ describe("wire capture — attribution + auth + chat_template_kwargs", () => {
       });
       expect("reasoning_effort" in kwargs).toBe(false);
       expect(kwargs.enable_thinking).toBe(false);
+    } finally {
+      delete process.env[KEY_ENV];
+    }
+  });
+
+  it("a per-route defaultEffort of off dispatches like an explicit off (no effort key, enable_thinking false)", async () => {
+    process.env[KEY_ENV] = "dummy";
+    try {
+      // Off-by-default: the model's committed default is off (the
+      // Default-effort select's "off"), the caller names no effort — the
+      // exact dispatch the main UI produces with the selector preselected
+      // to Off. Same wire shape as the explicit-off case above: the
+      // $var: thinking.enabled binding resolves to the explicit off.
+      const req = await runRoute(
+        {
+          name: "wire-default-off",
+          apiKeyEnv: KEY_ENV,
+          overrides: { [FLAGSHIP]: { defaultEffort: "off" } },
+        },
+      );
+      const kwargs = req.body.chat_template_kwargs as Record<string, unknown>;
+      expect(kwargs).toEqual({
+        enable_thinking: false,
+        preserve_thinking: true,
+      });
+      expect("reasoning_effort" in kwargs).toBe(false);
+    } finally {
+      delete process.env[KEY_ENV];
+    }
+  });
+
+  it("a per-route defaultEffort of a real effort rides the wire when the caller names none", async () => {
+    process.env[KEY_ENV] = "dummy";
+    try {
+      const req = await runRoute(
+        {
+          name: "wire-default-xhigh",
+          apiKeyEnv: KEY_ENV,
+          overrides: { [FLAGSHIP]: { defaultEffort: "xhigh" } },
+        },
+      );
+      expect(req.body.chat_template_kwargs).toEqual({
+        enable_thinking: true,
+        reasoning_effort: "xhigh",
+        preserve_thinking: true,
+      });
     } finally {
       delete process.env[KEY_ENV];
     }

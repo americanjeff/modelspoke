@@ -663,10 +663,28 @@ const liveTags: string[] =
         })
         .catch(() => []);
 
+/**
+ * The first candidate whose `/api/show` still answers. Ollama retires
+ * CLOUD models server-side (a retired tag lingers in `/api/tags` while
+ * `/api/show` errors — "was retired at …"), so the suite must pick a LIVE
+ * model, not the first alphabetical one.
+ */
+async function liveShowable(names: readonly string[]): Promise<string | undefined> {
+  for (const name of names) {
+    const show = await ollamaShow(LIVE_ORIGIN, name, { signal: AbortSignal.timeout(10_000) }).catch(
+      () => undefined,
+    );
+    if (show !== undefined) return name;
+  }
+  return undefined;
+}
+
 const liveGemma4 = liveTags.find((name) => /^gemma4:[^/]+$/.test(name) && !name.endsWith("-cloud"));
-const liveGlmCloud = liveTags.find((name) => name.startsWith("glm-") && name.endsWith(":cloud"));
-const liveDeepseekCloud = liveTags.find(
-  (name) => name.startsWith("deepseek-") && name.endsWith(":cloud"),
+const liveGlmCloud = await liveShowable(
+  liveTags.filter((name) => name.startsWith("glm-") && name.endsWith(":cloud")),
+);
+const liveDeepseekCloud = await liveShowable(
+  liveTags.filter((name) => name.startsWith("deepseek-") && name.endsWith(":cloud")),
 );
 
 describe.skipIf(liveVersion === undefined)("Live E2E — detection", () => {

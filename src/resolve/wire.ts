@@ -42,8 +42,21 @@
  * "future option: extract to core" flagged in their docblocks):
  *
  *   absent from the resolved map -> pinned `null`  (declared unsupported)
- *   offered `off`                -> key stays ABSENT ("supported, sends nothing")
- *   other offered levels         -> wire value verbatim
+ *   offered levels (off included) -> wire value verbatim
+ *
+ * An OFFERED `off` keeps its wire value: pi-ai sends it as the off switch
+ * when no level is requested (its openai-completions off branch reads
+ * `thinkingLevelMap.off` and dispatches a string value) — the Ollama
+ * family tables' `off: "none"` off-switch encoding, and the reference
+ * dsh-llm-pi-ai adapter's "an off with a value sends that value" semantics
+ * (a value-less off is not expressible in the canonical form — a canonical
+ * `off` is always a non-empty string, so "supported, sends nothing" has no
+ * canonical spelling here and is not produced). Under a named thinkingFormat
+ * the value is at most moot: the format branch handles off itself —
+ * chat-template through the `$var` bindings, with `omitWhenOff` dropping the
+ * effort kwarg before any map lookup; the other branches either only test
+ * `off !== null` (a value satisfies that exactly as an absent key does) or
+ * read the value to dispatch it, which is the point.
  *
  * plus the shim case (shim ACTIVE only): the wire model IS reasoning
  * (`model.reasoning: true`) but offers no selectable level — every
@@ -101,10 +114,11 @@ export function wireThinkingLevelMap(
       const wire = resolved.thinkingLevelMap?.[level];
       if (wire === undefined) {
         map[level] = null; // not offered by any tier ⇒ unsupported
-      } else if (level !== "off") {
-        map[level] = wire; // wire spelling dispatched for that level
+      } else {
+        // Wire spelling dispatched for that level — `off` included: its
+        // value is the wire's off switch (module doc).
+        map[level] = wire;
       }
-      // offered off ⇒ key stays ABSENT: "supported, send nothing"
     }
     return map;
   }

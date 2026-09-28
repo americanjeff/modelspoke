@@ -73,12 +73,44 @@ describe("wireReasoning — the wire gate vs the declared dimension", () => {
 });
 
 describe("wireThinkingLevelMap — the RAW level map the wire model carries", () => {
-  it("a reasoning model: absent→null, offered levels verbatim, offered off ABSENT (unchanged)", () => {
+  it("a reasoning model: absent→null, offered levels (off included) verbatim", () => {
     const map = wireThinkingLevelMap(
       resolved({ reasoning: true, thinkingLevelMap: { off: "low", low: "low", medium: "medium", xhigh: "xhigh" } }),
     );
-    expect(map).toEqual({ low: "low", medium: "medium", xhigh: "xhigh", minimal: null, high: null, max: null });
-    expect(map).not.toHaveProperty("off");
+    expect(map).toEqual({
+      off: "low",
+      low: "low",
+      medium: "medium",
+      xhigh: "xhigh",
+      minimal: null,
+      high: null,
+      max: null,
+    });
+  });
+
+  it("the Ollama cloud-glm shape: off 'none' rides as the wire's off switch", () => {
+    const map = wireThinkingLevelMap(
+      resolved({ reasoning: true, thinkingLevelMap: { off: "none", low: "low", medium: "medium", high: "high", max: "max" } }),
+    );
+    expect(map).toEqual({
+      off: "none",
+      minimal: null,
+      low: "low",
+      medium: "medium",
+      high: "high",
+      xhigh: null,
+      max: "max",
+    });
+    // and pi-ai's own resolution offers off + the mapped levels
+    expect(
+      getSupportedThinkingLevels({ reasoning: true, thinkingLevelMap: map } as never),
+    ).toEqual(["off", "low", "medium", "high", "max"]);
+  });
+
+  it("an off not offered by any tier is pinned null (off unsupported)", () => {
+    const map = wireThinkingLevelMap(resolved({ reasoning: true, thinkingLevelMap: { low: "low" } }));
+    expect(map?.off).toBeNull();
+    expect(getSupportedThinkingLevels({ reasoning: true, thinkingLevelMap: map } as never)).toEqual(["low"]);
   });
 
   it("a plain non-reasoning model carries no level map (unchanged)", () => {

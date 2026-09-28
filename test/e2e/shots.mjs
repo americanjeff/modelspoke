@@ -91,13 +91,11 @@ async function main() {
       what: "catalog fetch (green dot)",
     });
     await sleep(1500);
-    // Frame the shot at the card's disclosure header (where the settings
-    // live) rather than the provider row — the editor below is tall, and a
-    // row-anchored scroll pushes the card header out of the pane.
+    // Frame the shot at the top of the settings panel rather than the
+    // provider row — the editor below is tall, and a row-anchored scroll
+    // pushes the panel top out of the pane.
     await s.page.evaluate(() => {
-      const card = [...document.querySelectorAll("button[aria-expanded]")]
-        .find((b) => b.getAttribute("aria-expanded") === "true" && (b.textContent || "").includes("Modelspoke"));
-      card?.scrollIntoView({ block: "start" });
+      document.querySelector('[data-modelspoke="card"]')?.scrollIntoView({ block: "start" });
     });
     await sleep(500);
     const p1 = path.join(SCREENSHOT_DIR, "modelspoke-01-section.png");

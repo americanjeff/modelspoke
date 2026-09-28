@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Modelspoke",
+    "description": "配置本地模型与 Provider，自动发现推理强度、图像输入与上下文大小。"
+  }
+}

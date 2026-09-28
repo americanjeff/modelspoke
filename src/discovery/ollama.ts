@@ -337,7 +337,12 @@ export interface OllamaCanonicalMapping {
  *   log line).
  *
  * `maxTokens` / `compat` are NEVER emitted (decision 4 — undiscoverable /
- * already pi-ai's detected default). Never throws.
+ * already pi-ai's detected default: the dsh adapter omits the wire model's
+ * `compat` block whenever no tier supplied one (src/dsh/pi-model.ts
+ * `buildPiModel` `compatSource`), so pi-ai's own openai-completions
+ * detection — `supportsReasoningEffort: true` for a generic origin —
+ * applies and the family tables' `reasoning_effort` wire values are
+ * dispatched). Never throws.
  */
 export function ollamaShowToCanonical(
   id: string,

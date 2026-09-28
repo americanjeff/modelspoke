@@ -24,7 +24,7 @@ const LLSWAP_BIN = process.env.E2E_LLAMA_SWAP || "llama-swap";
 
 // The e2e selectors ride on dsh's own web UI, so a dsh bump can break them
 // silently — fail loud at the boundary (filestab's same guard).
-const DSH_VERSION = "0.1.7-rc.1";
+const DSH_VERSION = "0.1.7-rc.2";
 
 // The agent loop's system prompt opens with this — the discriminator for
 // the MAIN turn's request in the fake backend's log (the session-title
@@ -512,7 +512,8 @@ async function openModelspoke(browser, url) {
   // page's BUNDLE DETAIL, where the plugin-manager renders the
   // `plugins.bundle.config` slot entry between the description and the
   // rows: sidebar "Plugins" → "View modelspoke" (the card title button)
-  // → the card, whose disclosure starts collapsed; expand it.
+  // → the section panel (no disclosure — the card IS the detail page's
+  // content; `data-modelspoke="card"` anchors it for the wait below).
   await page.evaluate(() => {
     const els = [...document.querySelectorAll('button, a, [role="tab"]')];
     els.find((l) => (l.textContent || "").trim().toLowerCase() === "plugins")?.click();
@@ -524,14 +525,10 @@ async function openModelspoke(browser, url) {
   });
   await bundleDetail.first().click();
   await page.waitForTimeout(500);
-  const card = page.locator('button[aria-expanded]', { hasText: "Modelspoke" });
-  await until(async () => {
-    const count = await card.count();
-    if (count === 0) return false;
-    if ((await card.first().getAttribute("aria-expanded")) === "true") return true;
-    await card.first().click().catch(() => undefined);
-    return false;
-  }, { timeout: 20000, what: "the modelspoke card expanded" });
+  await until(async () => (await page.locator('[data-modelspoke="card"]').count()) > 0, {
+    timeout: 20000,
+    what: "the modelspoke settings panel",
+  });
   await until(
     () =>
       page.evaluate(() => {
@@ -657,6 +654,21 @@ async function j1_firstProvider(root, home, page, swap) {
     const entry = route.models.find((m) => m.id === other);
     ok(!("defaultEffort" in entry), `J1: ${other} has no defaultEffort in YAML`);
   }
+
+  // Off-by-default: the Default-effort select offers "off" (the full level
+  // vocabulary) — committing it writes defaultEffort: off (the dimension
+  // stays; the nothink sentinel is the checkbox's state, not a default).
+  // The materializing Apply may have collapsed the detail (slot re-seat) —
+  // re-open it if so.
+  if ((await u.detail("fake-flagship").count()) > 0) await u.detail("fake-flagship").click();
+  await until(() => u.defaultEffort("fake-flagship").count(), { what: "flagship detail (off edit)" });
+  eq(await u.defaultEffort("fake-flagship").inputValue(), "medium", "J1: the committed default re-renders in the select");
+  await u.defaultEffort("fake-flagship").selectOption({ value: "off" });
+  await u.apply.click();
+  await until(async () => {
+    const r = webModelspokeEntry(home)?.config?.routes?.find((x) => x.name === "fake-swap");
+    return r?.models?.some((m) => m.id === "fake-flagship" && m.defaultEffort === "off") === true;
+  }, { timeout: 30000, what: "YAML flagship defaultEffort = off" });
 }
 
 /**
@@ -819,7 +831,7 @@ async function j4_curation(home, page) {
   eq(entry.thinkingLevelMap, { off: "low", low: "low", medium: "medium", xhigh: "xhigh" }, "J4: the effective thinking map materializes");
   ok(entry.input?.includes("image") === true, "J4: the effective image input materializes");
   ok(!("compat" in entry), "J4: the deep $var compat block stays discovered (never copied from discovery)");
-  eq(entry.defaultEffort, "medium", "J4: the committed defaultEffort survives the edit");
+  eq(entry.defaultEffort, "off", "J4: the committed defaultEffort (off, from J1) survives the edit");
 
   // Delete→re-add (UNSAVED) must not resurrect the removed row's committed
   // tier: the re-added row is a FRESH row — its detail seeds from DISCOVERY

@@ -276,15 +276,19 @@ function warnLocaleBindOnce(): void {
 }
 
 /**
- * The canonical `defaultEffort` values: pi-ai's thinking levels
- * (`ThinkingLevel` = "minimal" | "low" | "medium" | "high" | "xhigh" |
- * "max") — the node half's `THINKING_LEVELS` (src/dsh/settings.ts) minus
- * "off", which is *thinking off*, not an effort. The route schema accepts a
- * free string (`defaultEffort: z.string()`), but the adapter CLAMPS any
- * committed value to the model's offered levels (pi parity — src/dsh/
- * adapter.ts), so the form constrains to the vocabulary. The empty form
- * value writes NO `defaultEffort` field (the optional-stays-absent shape
- * the node half's `routesOf` reads).
+ * The effort vocabulary (mirror of the node half's `THINKING_LEVELS`,
+ * src/dsh/settings.ts, MINUS "off" — thinking off is a level, never a
+ * wire value): the thinking-level map's VALUE column (an accepted effort
+ * level or "not supported"). The Default-effort select uses the FULL
+ * level vocabulary ({@link LEVELS}): an explicit "off" = off-by-default —
+ * the dimension stays offered (the runtime preselects it, the dispatch
+ * sends nothing); the NO-dimension state is the checkbox's (the nothink
+ * sentinel), not a default. The route schema accepts a free string
+ * (`defaultEffort: z.string()`), but the adapter CLAMPS any committed
+ * value to the model's offered levels (pi parity — src/dsh/adapter.ts),
+ * so the form constrains to the vocabulary. The empty form value writes
+ * NO `defaultEffort` field (the optional-stays-absent shape the node
+ * half's `routesOf` reads).
  */
 const EFFORTS = ["minimal", "low", "medium", "high", "xhigh", "max"] as const;
 
@@ -661,83 +665,20 @@ const ms = {
     maxWidth: 720,
     color: "var(--dsw-alias-label-primary)",
   },
-  title: {
-    margin: 0,
-    fontSize: 16,
-    lineHeight: "24px",
-    fontWeight: 500,
-    color: "var(--dsw-alias-label-primary)",
-  },
-  titleRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-  },
-  titleIcon: {
-    width: 18,
-    height: 18,
-    flexShrink: 0,
-  },
   intro: {
     margin: 0,
     fontSize: 14,
     lineHeight: "22px",
     color: "var(--dsw-alias-label-tertiary)",
   },
-  /** The Plugins-page plugin card chrome (ModelspokeCard): the in-box
-   *  PluginCard.module.css geometry ported to inline styles (the reference
-   *  ships CSS modules the bundle-purity gate keeps out). The in-box
-   *  `:hover` / `:focus-visible` pseudo-states are dropped — inline styles
-   *  cannot express them (the `MsButton` port's same limitation). */
+  // Bare structural wrapper for the plugins.bundle.config slot entry
+  // (ModelspokeCard) — the host's page already frames the section (its
+  // header above, Components below), so the panel carries no chrome of its
+  // own.
   card: {
     listStyle: "none",
-    border: "1px solid var(--dsw-alias-border-l2)",
-    background: "var(--dsw-alias-bg-layer-3)",
-    borderRadius: 12,
   },
-  cardHeader: {
-    appearance: "none",
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    width: "100%",
-    padding: "14px 16px",
-    font: "inherit",
-    color: "inherit",
-    textAlign: "left",
-    cursor: "pointer",
-    background: "transparent",
-    border: 0,
-    borderRadius: 12,
-  },
-  cardHeadText: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-    flex: 1,
-    minWidth: 0,
-  },
-  cardName: {
-    fontSize: 15,
-    fontWeight: 600,
-    lineHeight: "1.4",
-    color: "var(--dsw-alias-label-primary)",
-  },
-  cardDescription: {
-    fontSize: 13,
-    lineHeight: "1.5",
-    color: "var(--dsw-alias-label-tertiary)",
-  },
-  cardChevron: {
-    flex: "none",
-    color: "var(--dsw-alias-label-tertiary)",
-    transition: "transform 0.16s",
-  },
-  cardBody: {
-    borderTop: "1px solid var(--dsw-alias-border-l2)",
-    margin: "0 16px",
-    paddingBottom: 8,
-  },
+
   rows: {
     listStyle: "none",
     margin: "12px 0 0",
@@ -1284,28 +1225,7 @@ const focusStyle = (focused: boolean): CSSProperties =>
 /** The button-like focus paint (the reference's `:focus-visible` ring). */
 const ringStyle = (focused: boolean): CSSProperties => (focused ? { boxShadow: FOCUS_RING } : {});
 
-/** The modelspoke mark (assets/logo/bubble-wheel-hollow.svg geometry), 64x64
- *  viewBox, currentColor — inherits the section's label-primary color. */
-function MsWheelMark(props: { style?: CSSProperties }) {
-  return (
-    <svg
-      viewBox="0 0 64 64"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={6}
-      strokeLinecap="round"
-      aria-hidden="true"
-      style={props.style}
-    >
-      <circle cx={32} cy={32} r={21} />
-      <line x1={35.3} y1={26.4} x2={40.3} y2={17.7} />
-      <line x1={35.3} y1={37.6} x2={41} y2={47.6} />
-      <line x1={25.5} y1={32} x2={15.5} y2={32} />
-      <path d="M46.1 45.4 L36.5 50.9 L48 59.7 Z" fill="currentColor" stroke="none" />
-      <circle cx={32} cy={32} r={4.5} fill="none" strokeWidth={3} />
-    </svg>
-  );
-}
+
 
 /**
  * The section's text input (the shared inline style + the focus
@@ -1487,7 +1407,9 @@ type ConfigPatch = Partial<
  * after the last row, `−` at the right of each row (the verbose
  * "Thinking level map" label + hint are dropped); 4) the per-model
  * **Default effort** select (the entry's `defaultEffort` — shown only
- * while the reasoning capability is ON; empty = the built-in fallback);
+ * while the reasoning capability is ON; options = the full level
+ * vocabulary, "off" = off-by-default with the dimension still offered;
+ * empty = the built-in fallback);
  * 5) the read-only "preserved from the profile's patch entry" line (the deep
  * compat fields are NEVER editable — they are preserved through every save by
  * the write discipline); 6) Reset (bottom-right, draft-scoped).
@@ -1663,8 +1585,12 @@ function ModelDetail(props: {
       {/* The per-model Default effort (the entry's `defaultEffort`;
           additive). Shown only while the Reasoning-effort capability is ON
           (pi parity: a non-reasoning model has no effort dimension — any
-          effort on it clamps to off). `""` = no per-model default: the
-          empty option DISPLAYS the determinable default — the built-in
+          effort on it clamps to off). Options = the FULL level vocabulary
+          (LEVELS): "off" = off-by-default — the dimension STAYS offered
+          (the main UI preselects off, a per-session pick still turns
+          thinking on; the nothink sentinel — no dimension at all — is the
+          checkbox's state, not a default). `""` = no per-model default:
+          the empty option DISPLAYS the determinable default — the built-in
           fallback (pi's session default `medium`, clamped to this model's
           offered levels). */}
       {reasoningOn ? (
@@ -1687,7 +1613,7 @@ function ModelDetail(props: {
                 ),
               })}
             </option>
-            {EFFORTS.map((effort) => (
+            {LEVELS.map((effort) => (
               <option key={effort} value={effort}>
                 {effort}
               </option>
@@ -3543,10 +3469,6 @@ export function apply(ctx: ClientContext): void {
 
     return (
       <div style={ms.section}>
-        <div style={ms.titleRow}>
-          <MsWheelMark style={ms.titleIcon} />
-          <h2 style={ms.title}>modelspoke</h2>
-        </div>
         <p style={ms.intro}>{t(locale, "intro")}</p>
         {snapshot.status === "loading" && <p>{t(locale, "loadingProviders")}</p>}
         {snapshot.status === "unavailable" && <p>{t(locale, "settingsUnavailable")}</p>}
@@ -4026,51 +3948,24 @@ export function apply(ctx: ClientContext): void {
   // between the description and the rows, the 0.1.7 successor of the
   // configurable tab's `settings.plugin.item` dispatch). The bundle-purity
   // gate forbids importing the in-box card chrome as values (it ships CSS
-  // modules this bundle cannot take), so this card draws its own disclosure
-  // header — name + description, chevron, `aria-expanded` — in the page's
-  // plain-element inline styles, the reference module CSS's geometry ported
-  // token-for-token like the `ms` section chrome (PluginCard.module.css,
-  // dsh 0.1.1-rc.2). The body
-  // (the section itself) stays MOUNTED while collapsed — hidden, not
-  // unmounted — so an in-flight provider draft, an open provider card, and
-  // an open model detail survive a collapse (the in-box cards keep their
-  // staged drafts the same way, through their form controllers).
+  // modules this bundle cannot take), so the section's chrome is drawn in
+  // the page's plain-element inline styles, the reference module CSS's
+  // geometry ported token-for-token (PluginCard.module.css, dsh 0.1.1-rc.2).
+  // There is NO disclosure and NO panel chrome of its own: the card is the
+  // page's only content, so the section renders directly (the host's list
+  // item is a bare wrapper — `data-modelspoke="card"` is the e2e/screenshot
+  // anchor), and the page's own header already carries the plugin's name and
+  // description — a disclosure header would duplicate it and buy a collapse
+  // nobody asked for.
   // The registration is gated through configForms.whileServed on the
   // `modelspoke` namespace: while the Host serves the section the bundle
   // page shows its Configuration section; a deployment without it shows no
   // trace.
-  const ModelspokeCard = () => {
-    const [open, setOpen] = useState(false);
-    // i18n — the live locale (preference → browser; live via subscribe).
-    const locale = useModelspokeLocale();
-    return (
-      <li style={ms.card}>
-        <button
-          type="button"
-          aria-expanded={open}
-          onClick={() => setOpen(!open)}
-          style={ms.cardHeader}
-        >
-          <span style={ms.cardHeadText}>
-            <span style={ms.cardName}>{t(locale, "pluginCardTitle")}</span>
-            <span style={ms.cardDescription}>{t(locale, "pluginCardDescription")}</span>
-          </span>
-          <span
-            aria-hidden="true"
-            style={{
-              ...ms.cardChevron,
-              ...(open ? { transform: "rotate(180deg)" } : {}),
-            }}
-          >
-            ▾
-          </span>
-        </button>
-        <div style={{ ...ms.cardBody, display: open ? "block" : "none" }}>
-          <ModelspokeSection />
-        </div>
-      </li>
-    );
-  };
+  const ModelspokeCard = () => (
+    <li style={ms.card} data-modelspoke="card">
+      <ModelspokeSection />
+    </li>
+  );
 
   ctx.effect(
     () =>
