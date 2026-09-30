@@ -46,7 +46,9 @@
  * per field), and the discovery seed is DISPLAY-ONLY — the dirty baseline
  * and the commit merge key on the COMMITTED baseline (an untouched detail
  * commits nothing; a discovery value is never written as a user override).
- * A route is either an explicit entry list or FULL_CATALOG (`models: null`
+ * A route is one of three served-set states: an explicit entry list,
+  * EXPLICIT EMPTY (`models: []` — configured, serves nothing; the stored
+  * `"none"` sentinel; a new provider starts here), or FULL_CATALOG (`models: null`
  * — serve the whole discovered catalog, per-wire-id config in the route's
  * legacy `overrides` map); a FULL_CATALOG card seeds its rows from the
  * fetched catalog (curation.js `seedCatalogEntries`, name = id) and the
@@ -182,6 +184,7 @@ import {
 // to FULL_CATALOG), effective tier-1 merge, and pure first-write fold the
 // node half's writers run.
 import {
+  NO_SERVED_MODELS,
   NO_THINKING_LEVELS,
   cleanRoutePhantoms,
   decodeRouteModels,
@@ -545,7 +548,12 @@ function routesOf(section: unknown): RouteRow[] {
  * lenient reader, so a written explicit entry list, the settled
  * resolved view (phantom-materialized, then phantom-stripped), and FULL_CATALOG
  * (`models` absent / `[]` / null) all read as one canonical form; a legacy
- * string allow-list degrades to FULL_CATALOG. The legacy per-wire-id map rides the key in canonical form
+ * string allow-list degrades to FULL_CATALOG. EXPLICIT EMPTY (serve nothing)
+ * is a distinct state that arrives in two spellings — the in-memory `[]`
+ * (the read-back side, decoded by `routesOf`) and the stored `"none"`
+ * sentinel (the written side) — and must key to the SAME value; the raw
+ * value is checked for it because `decodeRouteModels` would re-conflate the
+ * in-memory `[]` into FULL_CATALOG. The legacy per-wire-id map rides the key in canonical form
  * under either spelling — the stored `overrides` key or the in-memory
  * `legacyOverrides` key. A write that dropped the served set (or a fold
  * that landed elsewhere) must read as a divergence, the same bug class the
@@ -555,9 +563,13 @@ const routeKey = (raw: Record<string, unknown>): string => {
   const name = typeof raw.name === "string" ? raw.name : "";
   const baseURL = typeof raw.baseURL === "string" ? raw.baseURL : "";
   const apiKeyEnv = typeof raw.apiKeyEnv === "string" ? raw.apiKeyEnv : "";
+  const modelsRaw = raw.models;
   const decoded = decodeRouteModels({ ...raw, overrides: raw.overrides ?? raw.legacyOverrides });
-  const models =
-    decoded.models === null
+  const isExplicitEmpty =
+    modelsRaw === NO_SERVED_MODELS || (Array.isArray(modelsRaw) && modelsRaw.length === 0);
+  const models = isExplicitEmpty
+    ? canonicalJson([]) // explicit empty (either spelling) — NOT the FULL_CATALOG key
+    : decoded.models === null
       ? "\u0001full-catalog"
       : canonicalJson(
           decoded.models.map(
@@ -2133,15 +2145,22 @@ export function apply(ctx: ClientContext): void {
      * The in-memory route ({@link RouteRow}: `models: ModelEntry[] |
      * null`, `legacyOverrides`) → the STORED-shape route object the fold
      * and the phantom-inverse writer consume (`models` key omitted while
-     * FULL_CATALOG; `legacyOverrides` → the stored `overrides` key). The
-     * node half's `storeRoute` keeps the stored form byte-for-byte; this
-     * mapping is the client's equivalent at the commit boundary.
+     * FULL_CATALOG; an EXPLICIT EMPTY set — `models: []` — as the stored
+     * `"none"` sentinel; `legacyOverrides` → the stored `overrides` key).
+     * The node half's `storeRoute` keeps the stored form byte-for-byte;
+     * this mapping is the client's equivalent at the commit boundary (the
+     * two must agree on the "serve nothing" spelling — src/overrides.ts
+     * NO_SERVED_MODELS).
      */
     const toStoredRoute = (r: RouteRow): Record<string, unknown> => ({
       name: r.name,
       baseURL: r.baseURL,
       ...(r.apiKeyEnv !== undefined ? { apiKeyEnv: r.apiKeyEnv } : {}),
-      ...(r.models === null ? {} : { models: r.models }),
+      ...(r.models === null
+        ? {}
+        : r.models.length === 0
+          ? { models: NO_SERVED_MODELS }
+          : { models: r.models }),
       ...(r.legacyOverrides !== undefined ? { overrides: r.legacyOverrides } : {}),
     });
 
@@ -3447,9 +3466,11 @@ export function apply(ctx: ClientContext): void {
         name: draft.name,
         baseURL: draft.baseURL,
         ...(draft.apiKeyEnv !== "" ? { apiKeyEnv: draft.apiKeyEnv } : {}),
-        // A new provider serves the FULL catalog (no served-set
-        // field; the first curation edit writes one).
-        models: null,
+        // A new provider starts EXPLICIT-EMPTY — configured, but serving
+        // NOTHING until a model is added (stored as the "none" sentinel).
+        // It does NOT serve the full catalog on connect (the old behavior
+        // materialized the whole catalog into routes on the first edit).
+        models: [],
       };
       // The "Next" flow: on a VERIFIED commit the add form closes and the
       // new provider's OWN section opens on it (the expandAfterAdd flag —

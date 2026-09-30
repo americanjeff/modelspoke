@@ -4,12 +4,15 @@
  * Contents (the core contract, src/types.ts; per-route reorg; served-set
  * rework):
  *   routes:    [{ name, baseURL, apiKeyEnv?,
- *                models?: <entry[]>?,                   // the SERVED SET:
+ *                models?: <entry[]> | "none"?,          // the SERVED SET:
  *                                                        //  { name, id,
  *                                                        //  …config,
  *                                                        //  defaultEffort? }[]
  *                                                        //  (presence =
- *                                                        //  served);  absent
+ *                                                        //  served);  "none"
+ *                                                        //  = explicit
+ *                                                        //  EMPTY (serve
+ *                                                        //  nothing);  absent
  *                                                        //  / [] =
  *                                                        //  FULL_CATALOG,
  *                overrides?: { "<wire id>": <entry> }?  // per-wire-id
@@ -24,10 +27,10 @@
  *
  * The schemastery schema below is the plugin's `Config` write gate (0.1.7):
  * the loader validates the entry's `config:` against it where written (it
- * accepts the entry-array `models` shape
- * only — a legacy string allow-list is refused; the writer emits the form
- * the in-memory state needs); `routes` is `.volatile()` so a card save
- * commits in place. Read-side extraction ({@link routesOf}) is
+ * accepts the entry-array `models` shape and the explicit-EMPTY sentinel
+ * `models: "none"` — a legacy string allow-list is refused; the writer emits
+ * the form the in-memory state needs); `routes` is `.volatile()` so a card
+ * save commits in place. Read-side extraction ({@link routesOf}) is
  * lenient (skips malformed entries, never throws) — the same posture as the
  * core's `loadOverrides`: invalid values dropped, validation with helpful
  * errors deferred.
@@ -35,7 +38,7 @@
 
 import z from "@deepseek-ai/schemastery";
 import { normalizeOverrideEntry } from "../config/index.js";
-import { decodeRouteModels, effectiveOverrideEntry } from "../overrides.js";
+import { decodeRouteModels, effectiveOverrideEntry, NO_SERVED_MODELS } from "../overrides.js";
 import type { ModelspokeRoute, OverrideEntry } from "../types.js";
 
 /** pi-ai thinking levels; the keys a `thinkingLevelMap` may carry. */
@@ -153,11 +156,16 @@ const route = z.object({
   baseURL: z.string().min(1).required(),
   apiKeyEnv: z.string(),
   // The route's SERVED SET: an array of model entries
-  // ({ name, id, …config } — presence = served). Absent / [] = FULL_CATALOG
-  // (serve the whole discovered catalog). A legacy string allow-list is NOT
-  // a supported stored form — this gate refuses it (the lenient reader
-  // degrades one to FULL_CATALOG if it ever reaches the in-memory path).
-  models: z.array(modelEntry),
+  // ({ name, id, …config } — presence = served), or the EXPLICIT-EMPTY
+  // sentinel "none" (configured, serves nothing — a STRING for the same
+  // reason as the nothink one: an absent `models` key materializes to the
+  // `[]` phantom in the resolved view, so an empty-array spelling could
+  // never round-trip "serve nothing"; src/overrides.ts NO_SERVED_MODELS).
+  // Absent / [] = FULL_CATALOG (serve the whole discovered catalog). A
+  // legacy string allow-list is NOT a supported stored form — this gate
+  // refuses it (the lenient reader degrades one to FULL_CATALOG if it ever
+  // reaches the in-memory path).
+  models: z.union([z.const(NO_SERVED_MODELS), z.array(modelEntry)]),
   // Per-route model overrides: exact WIRE id → the override entry
   // (the EXACT top-level entry shape). Meaningful only while the route is
   // FULL_CATALOG (tier 1 for the catalog models, per field over the legacy
@@ -258,10 +266,11 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  * non-empty string `name` and `baseURL`; optional string fields pass through
  * only when non-empty. The route's served set is decoded by the shared
  * LENIENT reader (src/overrides.ts {@link decodeRouteModels}): the entry
- * array, or absent/empty/malformed = FULL_CATALOG (`models: null` + the
- * route's raw `overrides` map as `legacyOverrides`); a legacy string
- * allow-list degrades to FULL_CATALOG. Never throws — malformed elements
- * are skipped.
+ * array, the explicit-EMPTY sentinel (`models: "none"` → `models: []` —
+ * configured, serves nothing), or absent/empty/malformed = FULL_CATALOG
+ * (`models: null` + the route's raw `overrides` map as `legacyOverrides`);
+ * a legacy string allow-list degrades to FULL_CATALOG. Never throws —
+ * malformed elements are skipped.
  */
 export function routesOf(section: unknown): ModelspokeRoute[] {
   const raw = isPlainObject(section) ? section.routes : undefined;

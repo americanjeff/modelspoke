@@ -823,6 +823,15 @@ describe("decodeRouteModels (the dual-shape lenient reader)", () => {
     expect(decodeRouteModels({ overrides: "junk" })).toEqual({ models: null });
   });
 
+  it('explicit empty: the "none" sentinel → models [] (serves nothing; NOT FULL_CATALOG)', () => {
+    expect(decodeRouteModels({ models: "none" })).toEqual({ models: [] });
+    // The sentinel's overrides map is ignored (explicit routes carry config in
+    // entries — the reader never consults the map for an explicit route).
+    expect(decodeRouteModels({ models: "none", overrides: { m: { contextWindow: 1 } } })).toEqual({
+      models: [],
+    });
+  });
+
   it("new shape: no legacyOverrides (the entries carry the config)", () => {
     expect("legacyOverrides" in decodeRouteModels({ models: [{ id: "a" }] })).toBe(false);
   });
@@ -881,12 +890,18 @@ describe("storeRoute (the byte-preserving route writer)", () => {
     expect("overrides" in stored).toBe(false);
   });
 
-  it("explicit: an entry with an empty name or id is skipped; an empty set collapses to FULL_CATALOG (no models key)", () => {
+  it("explicit: an entry with an empty name or id is skipped; an empty set writes the \"none\" sentinel (serve nothing — NOT the FULL_CATALOG form)", () => {
     const stored = storeRoute(
       { name: "r", baseURL: "http://x/v1", models: [{ name: "", id: "a" }, { name: "B", id: "" }] as never },
       null,
     );
-    expect(stored).toEqual({ name: "r", baseURL: "http://x/v1" });
+    expect(stored).toEqual({ name: "r", baseURL: "http://x/v1", models: "none" });
+    expect("overrides" in stored).toBe(false);
+  });
+
+  it("explicit: an already-empty set writes the \"none\" sentinel", () => {
+    const stored = storeRoute({ name: "r", baseURL: "http://x/v1", models: [] as never }, null);
+    expect(stored).toEqual({ name: "r", baseURL: "http://x/v1", models: "none" });
   });
 
   it("explicit: a cleared apiKeyEnv deletes the committed key; a stale route-level defaultEffort (field removed) is deleted", () => {
@@ -1028,6 +1043,10 @@ describe("cleanRoutePhantoms — entry arrays", () => {
       cleanRoutePhantoms({ name: "r", models: [{ name: "A", id: "a", thinkingLevelMap: "none" }] }),
     ).toEqual({ name: "r", models: [{ name: "A", id: "a", thinkingLevelMap: "none" }] });
     expect(cleanRoutePhantoms({ name: "r", models: ["a", "b"] })).toEqual({ name: "r", models: ["a", "b"] });
+  });
+
+  it("keeps the explicit-empty served-set sentinel (models: \"none\") untouched — it is a real value, not a phantom", () => {
+    expect(cleanRoutePhantoms({ name: "r", models: "none" })).toEqual({ name: "r", models: "none" });
   });
 });
 

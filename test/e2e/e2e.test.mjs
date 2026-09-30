@@ -24,7 +24,7 @@ const LLSWAP_BIN = process.env.E2E_LLAMA_SWAP || "llama-swap";
 
 // The e2e selectors ride on dsh's own web UI, so a dsh bump can break them
 // silently — fail loud at the boundary (filestab's same guard).
-const DSH_VERSION = "0.1.7-rc.2";
+const DSH_VERSION = "0.2.0-rc.2";
 
 // The agent loop's system prompt opens with this — the discriminator for
 // the MAIN turn's request in the fake backend's log (the session-title
@@ -599,6 +599,28 @@ async function typeInput(page, locator, value) {
   );
 }
 
+/**
+ * Add a model row to the OPEN card by wire id: click the dashed "Add model"
+ * slot, type the wire id into the fresh row's id combobox (the name
+ * auto-fills to the id when the catalog supplies no display name — the fake
+ * models have none), then set the name explicitly to the id so the row is
+ * keyed unambiguously. Mirrors the J4 delete→re-add idiom.
+ */
+async function addModelRow(page, id) {
+  await page.getByRole("button", { name: "Add model" }).click();
+  const idInput = page.locator('input[aria-label^="Model wire id for"]').last();
+  await until(() => idInput.count(), { what: `new row id input for ${id}` });
+  await typeInput(page, idInput, id);
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(300);
+  const nameInput = page.locator('input[aria-label^="Model name for"]').last();
+  await typeInput(page, nameInput, id);
+  await page.waitForTimeout(300);
+  await until(() => page.getByRole("button", { name: `Remove model ${id}` }).count(), {
+    what: `row ${id} present`,
+  });
+}
+
 async function j1_firstProvider(root, home, page, swap) {
   const u = ui(page);
   ok(await u.emptyState.count() > 0, "J1: empty state shows");
@@ -616,8 +638,21 @@ async function j1_firstProvider(root, home, page, swap) {
     what: "catalog fetch (green dot)",
   });
 
+  // A NEW PROVIDER starts EXPLICIT-EMPTY: no rows until a model is added
+  // (it does NOT serve the full catalog on connect). The catalog is still
+  // fetched (the green dot) — it is the pool you add models from.
+  ok((await u.addModel.count()) > 0, "J1: the 'Add model' slot shows on the empty card");
   for (const id of ["fake-flagship", "fake-text", "fake-mini"]) {
-    ok(await u.modelRow(id).count() > 0, `J1: catalog row for ${id}`);
+    eq(await u.modelRow(id).count(), 0, `J1: no auto row for ${id} (explicit empty, not FULL_CATALOG)`);
+  }
+
+  // The user's new flow: add the three models from the fetched catalog —
+  // only added models get routes (no whole-catalog materialization).
+  for (const id of ["fake-flagship", "fake-text", "fake-mini"]) {
+    await addModelRow(page, id);
+  }
+  for (const id of ["fake-flagship", "fake-text", "fake-mini"]) {
+    ok(await u.modelRow(id).count() > 0, `J1: row for ${id} after Add`);
     eq(await u.modelIdInput(id).inputValue(), id, `J1: row ${id} carries the wire id`);
   }
 
@@ -649,7 +684,7 @@ async function j1_firstProvider(root, home, page, swap) {
   const route = webModelspokeEntry(home).config.routes.find((r) => r.name === "fake-swap");
   eq(route.baseURL, swap.baseUrl, "J1: route baseURL written as entered");
   ok(!route.apiKeyEnv, "J1: no key env written (the field was left empty)");
-  eq(route.models.length, 3, "J1: the catalog materialized to an explicit 3-model list");
+  eq(route.models.length, 3, "J1: the three added models form an explicit list (no catalog materialization)");
   for (const other of ["fake-text", "fake-mini"]) {
     const entry = route.models.find((m) => m.id === other);
     ok(!("defaultEffort" in entry), `J1: ${other} has no defaultEffort in YAML`);
@@ -919,11 +954,34 @@ async function j4_curation(home, page) {
     const e = r?.models?.find((m) => m.id === "fake-flagship");
     return e !== undefined && !("contextWindow" in e) && !("defaultEffort" in e);
   }, { timeout: 30000, what: "YAML flagship entry back to identity-only" });
+
+  // BUG-003 repro: delete EVERY row and Apply. The route must commit as
+  // EXPLICIT-EMPTY (the "none" sentinel — serve nothing) and the re-derived
+  // card must STAY EMPTY — the old behavior inverted an empty list to
+  // FULL_CATALOG and re-populated the card with the whole catalog.
+  if ((await u.detailOpen("fake-flagship").count()) > 0) await u.detailOpen("fake-flagship").click();
+  for (const id of ["fake-flagship", "fake-text", "fake-mini"]) {
+    await u.removeModel(id).click();
+  }
+  await until(async () => (await page.getByRole("button", { name: /^Remove model / }).count()) === 0, {
+    what: "all rows removed from the draft",
+  });
+  await u.apply.click();
+  await until(async () => {
+    const r = webModelspokeEntry(home)?.config?.routes?.find((x) => x.name === name);
+    return r?.models === "none";
+  }, { timeout: 30000, what: "YAML route = the explicit-empty sentinel (NOT FULL_CATALOG)" });
+  // The re-derived card stays empty (no catalog re-population).
+  await until(async () => (await page.getByRole("button", { name: /^Remove model / }).count()) === 0, {
+    what: "the re-derived card has no rows (stayed empty)",
+  });
+  ok(await u.addModel.count() > 0, "J4: the empty card keeps its 'Add model' slot");
 }
 
 /**
  * J10 (b) — a dead port: the row's red dot + the card's one-line error +
- * Retry, and the failed fetch writes nothing to the profile's patch file.
+ * Retry, and the committed route is explicit-empty (the failed fetch wrote
+ * no catalog models).
  */
 async function j10_deadPort(home, page) {
   const u = ui(page);
@@ -949,7 +1007,7 @@ async function j10_deadPort(home, page) {
   const mk = webModelspokeEntry(home)?.config ?? {};
   const dead = mk.routes.find((r) => r.name === "dead");
   ok(dead !== undefined, "J10: the dead route exists (the Add committed)");
-  ok(!("models" in dead), "J10: the failed fetch wrote no models list");
+  eq(dead.models, "none", "J10: the dead route is explicit-empty (serve nothing) — the failed fetch wrote no catalog models");
   ok(mk.routes.some((r) => r.name === "fake-swap"), "J10: the live route untouched");
   await u.del("dead").click();
   await until(async () => (await u.edit("dead").count()) === 0, { what: "dead provider deleted" });
@@ -1032,11 +1090,12 @@ async function j11_liveDiscovery(page) {
     }
     found++;
     ok(n >= 1, `J11: ${c.name} discovery reports ${n} model(s)`);
-    // Count the per-row buttons, not the rows: only this card is open, so
-    // every "Remove model" button is a row of the live provider — and an
-    // `li:has(...)` count would over-count the card li wrapping the rows.
+    // A new provider starts EXPLICIT-EMPTY: discovery is proven by the dot's
+    // model count, not by auto-populated rows (the card lists no rows until
+    // a model is added). Count the per-row buttons: only this card is open,
+    // so every "Remove model" button would be a row of the live provider.
     const rows = await page.getByRole("button", { name: /^Remove model / }).count();
-    eq(rows, n, `J11: ${c.name} card lists ${n} model row(s)`);
+    eq(rows, 0, `J11: ${c.name} card starts with no rows (explicit empty)`);
     await u.del(c.name).click();
     await until(async () => (await u.edit(c.name).count()) === 0, { what: `${c.name}: row removed` });
   }

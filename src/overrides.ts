@@ -47,18 +47,24 @@
  *   state — it stays a phantom and reads as unset.
  *
  * - **SERVED SET**: a route's `models` field is the route's
- *   SERVED SET — either an array of model entries (`{ name, id, …config }`;
+ *   SERVED SET — an array of model entries (`{ name, id, …config }`;
  *   presence in the list IS the served state, the allow-list filter is
- *   retired) or absent/`[]` = FULL_CATALOG (serve the whole discovered
- *   catalog; per-wire-id config rides the route's `overrides` map). The
- *   LENIENT reader ({@link decodeRouteModels}) accepts the entry shape and
- *   the FULL_CATALOG spelling — never throws, malformed elements skipped;
- *   a legacy string allow-list is NOT a supported stored form and degrades
- *   to FULL_CATALOG. The BYTE-PRESERVING writer ({@link storeRoute}) writes
- *   the entries (phantom-stripped, no `overrides` key) for an explicit
- *   route, and keeps an untouched FULL_CATALOG route's stored
- *   `models`/`overrides` bytes exactly (the phantom inverse on the legacy
- *   map recovers the stored form).
+ *   retired), the EXPLICIT-EMPTY sentinel {@link NO_SERVED_MODELS}
+ *   (`models: "none"` — configured, serves NOTHING), or absent/`[]` =
+ *   FULL_CATALOG (serve the whole discovered catalog; per-wire-id config
+ *   rides the route's `overrides` map). The sentinel is a STRING for the
+ *   same reason as the nothink one: the schema-resolved view MATERIALIZES
+ *   `models: []` on every route whose key is absent (the `z.array`
+ *   implicit default), so an empty-ARRAY store spelling would read back as
+ *   FULL_CATALOG and could never mean "serve nothing". The LENIENT reader
+ *   ({@link decodeRouteModels}) accepts all three spellings — never throws,
+ *   malformed elements skipped; a legacy string allow-list is NOT a
+ *   supported stored form and degrades to FULL_CATALOG. The BYTE-
+ *   PRESERVING writer ({@link storeRoute}) writes the entries
+ *   (phantom-stripped, no `overrides` key) for an explicit route, the
+ *   sentinel for an explicit EMPTY set, and keeps an untouched
+ *   FULL_CATALOG route's stored `models`/`overrides` bytes exactly (the
+ *   phantom inverse on the legacy map recovers the stored form).
  *
  * Framework-neutral: no react, no node-only deps, no dsh imports (the client
  * bundle inlines it; the runtime requires stay react + react/jsx-runtime).
@@ -70,6 +76,17 @@ import type { ModelEntry, ModelspokeRoute, OverrideEntry } from "./types.js";
 
 /** The stored spelling of the explicit "no thinking levels" (nothink) state. */
 export const NO_THINKING_LEVELS = "none";
+
+/**
+ * The EXPLICIT-EMPTY served-set sentinel — the stored spelling for "this
+ * route is configured but serves NOTHING" (`models: "none"`; the in-memory
+ * decode is `models: []`, the empty EXPLICIT list — distinct from FULL_
+ * CATALOG's `models: null`). Same posture as {@link NO_THINKING_LEVELS}:
+ * the schema-resolved view materializes an absent `models` key to the `[]`
+ * phantom, so only a non-array spelling can round-trip "serve nothing"
+ * through the resolved view.
+ */
+export const NO_SERVED_MODELS = "none";
 
 /**
  * The INVERSE of the settings mirror's per-entry default materialization
@@ -180,10 +197,13 @@ export function effectiveOverrideEntry(
  *
  * - `models: null` and `models: []` are materializations (absent in the
  *   stored form — the lenient readers treat both as FULL_CATALOG), so the
- *   writer drops the key; a NON-EMPTY `models` array gets each entry
- *   element phantom-stripped (the nested phantom invariant — the materialized
- *   `input: []` / `thinkingLevelMap: {}` / empty `compat` recover the
- *   stored form); old-shape string elements pass through untouched.
+ *   writer drops the key; the EXPLICIT-EMPTY sentinel (`models: "none"` —
+ *   the stored spelling for "serve nothing") is a real value, kept as-is
+ *   (like the nothink sentinel); a NON-EMPTY `models` array gets each entry
+ *   element phantom-stripped (the nested phantom invariant — the
+ *   materialized `input: []` / `thinkingLevelMap: {}` / empty `compat`
+ *   recover the stored form); old-shape string elements pass through
+ *   untouched.
  * - an empty `overrides` map is a materialization (dropped); a non-empty
  *   map gets its ENTRIES phantom-stripped (the nested phantom invariant).
  *
@@ -246,7 +266,8 @@ export function entryFromLegacyId(id: string, legacy: Record<string, unknown> | 
 
 /** The decoded served set of one raw route (see {@link decodeRouteModels}). */
 export interface DecodedRouteModels {
-  /** The EXPLICIT served set — or `null` = FULL_CATALOG. */
+  /** The EXPLICIT served set (possibly EMPTY — the "serve nothing" state,
+   * the stored `models: "none"` sentinel) — or `null` = FULL_CATALOG. */
   models: ModelEntry[] | null;
   /** The route's legacy `overrides` map — set ONLY for FULL_CATALOG routes. */
   legacyOverrides?: Record<string, unknown>;
@@ -256,6 +277,11 @@ export interface DecodedRouteModels {
  * Decode one RAW route's `models` / `overrides` into the in-memory served
  * set (the lenient reader — never throws):
  *
+ * - `models` is the EXPLICIT-EMPTY sentinel (`"none"`) → **EXPLICIT EMPTY**:
+ *   `models: []` (the route is configured but serves NOTHING — the stored
+ *   spelling for the served set with zero entries; a hand-edited route can
+ *   pin this state, and the writer's first explicit write of an empty set
+ *   lands here). `legacyOverrides` ABSENT — like every explicit decode.
  * - `models` is an array carrying at least one PLAIN OBJECT with a non-empty
  *   string `id` → **EXPLICIT**: `models` = the entries in list order (each
  *   normalized — a missing `name` defaults to the `id`; non-object elements
@@ -269,7 +295,9 @@ export interface DecodedRouteModels {
  * stored form: it degrades to FULL_CATALOG (the allow-list is ignored, the
  * whole endpoint catalog is served). Recreate the route in the entry form
  * to serve a specific set. A hand-edited mixed array (objects AND strings)
- * reads as EXPLICIT (the string elements are skipped as malformed).
+ * reads as EXPLICIT (the string elements are skipped as malformed). Any
+ * OTHER string (`models: "full"`, …) degrades to FULL_CATALOG like any
+ * malformed value (the write gate refuses it on write).
  */
 export function decodeRouteModels(route: Record<string, unknown>): DecodedRouteModels {
   const raw = route ?? {};
@@ -278,6 +306,13 @@ export function decodeRouteModels(route: Record<string, unknown>): DecodedRouteM
       ? (raw.overrides as Record<string, unknown>)
       : undefined;
   const modelsRaw = raw.models;
+  if (modelsRaw === NO_SERVED_MODELS) {
+    // The explicit-EMPTY served set (serve nothing) — the string sentinel
+    // (like nothink): an absent `models` key materializes to the `[]`
+    // phantom in the resolved view, so only this spelling round-trips the
+    // empty EXPLICIT list through it.
+    return { models: [] };
+  }
   if (!Array.isArray(modelsRaw) || modelsRaw.length === 0) {
     return { models: null, ...(legacy === undefined ? {} : { legacyOverrides: legacy }) };
   }
@@ -625,12 +660,15 @@ export function foldLegacyOverrides(section: unknown): FoldResult {
 //   rest phantom-stripped (the resolved-view materialization inverse — the
 //   materialized `input: []` / `thinkingLevelMap: {}` / empty `compat`
 //   recover the stored form; the `"none"` sentinel is a string and never a
-//   phantom). NO `overrides` key is written — the per-model config lives in
-//   the entries, and the route's legacy map (if any) is DROPPED from the
-//   stored form on the first explicit write (the reader would never
-//   consult it for an explicit route). An explicit entry that carries no
-//   non-empty `name` AND `id` is skipped (the lenient posture — the UI
-//   discards empty-id rows before committing).
+//   phantom). An explicit EMPTY set writes the EXPLICIT-EMPTY sentinel
+//   (`models: "none"` — the reader's "serve nothing"; a `models: []` store
+//   spelling would read back as FULL_CATALOG, the resolved-view phantom).
+//   NO `overrides` key is written — the per-model config lives in the
+//   entries, and the route's legacy map (if any) is DROPPED from the stored
+//   form on the first explicit write (the reader would never consult it for
+//   an explicit route). An explicit entry that carries no non-empty `name`
+//   AND `id` is skipped (the lenient posture — the UI discards empty-id
+//   rows before committing).
 // - **FULL_CATALOG** route (`models: null`): preserve the OLD shape
 //   BYTE-FOR-BYTE — the committed `models` key (absent / `[]` / anything
 //   malformed) is left AS-IS (untouched, so an untouched FULL_CATALOG
@@ -675,12 +713,11 @@ export function storeRoute(
   }
 
   // EXPLICIT: one written entry per served model. An explicit EMPTY set
-  // collapses to the FULL_CATALOG stored form (no `models` key): the stored
-  // grammar has no "serve nothing" spelling — `models: []` reads back as
-  // FULL_CATALOG (the "empty ≡ full" discipline, preserved: a written
-  // form must re-read to the state it was written from).
+  // writes the "serve nothing" sentinel — `models: []` is NOT written: it
+  // reads back as FULL_CATALOG (a written form must re-read to the state
+  // it was written from).
   if (route.models.length === 0) {
-    delete out.models;
+    out.models = NO_SERVED_MODELS;
     delete out.overrides;
     return out;
   }
@@ -703,10 +740,9 @@ export function storeRoute(
     models.push(written);
   }
   if (models.length === 0) {
-    // The written set is empty (all rows discarded) — the same collapse as
-    // an explicitly empty set: the stored grammar has no "serve nothing"
-    // spelling, `models: []` reads back as FULL_CATALOG.
-    delete out.models;
+    // The written set is empty (all rows discarded) — the same "serve
+    // nothing" spelling as an explicitly empty set.
+    out.models = NO_SERVED_MODELS;
     delete out.overrides;
     return out;
   }

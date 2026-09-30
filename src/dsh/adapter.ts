@@ -47,7 +47,7 @@ import type {
   ResolutionResult,
 } from "../types.js";
 import { entryOverride } from "../overrides.js";
-import { toPiContext } from "./context.js";
+import { toPiContext, toProviderContext } from "./context.js";
 import type { AttachmentReader } from "./context.js";
 import { toStreamChunks } from "./events.js";
 import { requestHeaders } from "./headers.js";
@@ -445,16 +445,21 @@ export class ModelspokeAdapter extends LlmAdapter {
   }
 
   /**
-   * Advisory catalog: the route's SERVED SET — EXPLICIT: one row per
+   * Advisory catalog: the route's SERVED SET (EXPLICIT EMPTY = serve
+   * nothing: no rows and no discovery — a dead endpoint shows no models,
+   * not a catalog error) — EXPLICIT: one row per
    * `models` entry (`info.id = entry.name` — the harness identity; an entry
    * whose wire id the endpoint does not currently serve is still offered);
    * FULL_CATALOG: one row per DISCOVERED catalog model (harness id = wire
    * id, stable). Each row resolved through the full four-tier chain on its
    * WIRE id so it carries the source-suffix description. A discovery
-   * failure rejects (the catalog is genuinely unavailable).
+   * failure rejects (the catalog is genuinely unavailable) once discovery
+   * is due.
    */
   override async listModels(provider: string): Promise<readonly LlmModelInfo[]> {
     const route = this.routeOf(provider);
+    // EXPLICIT EMPTY (serve nothing): nothing to list, no discovery needed.
+    if (route.models !== null && route.models.length === 0) return [];
     const models = await this.discover(route); // rejects when the catalog is unavailable
     const byWire = new Map(models.map((m) => [m.id, m]));
     if (route.models === null) {
@@ -606,10 +611,15 @@ export class ModelspokeAdapter extends LlmAdapter {
       log: this.log,
     });
 
+    // pi-ai ≥0.87 (bundled by dsh 0.2.0-rc.2) reads request tools only from
+    // the transcript; fold the envelope via the host's normalizeContext or
+    // the tool schemas silently vanish from the wire (see toProviderContext).
+    const providerContext = await toProviderContext(context);
+
     // Dispatch on the CAPTURED pi-ai Model (generation freeze) — never a
     // rebuild from live settings.
     const piModel = generation.piModel;
-    const piStream = openAICompletionsApi().streamSimple(piModel, context, {
+    const piStream = openAICompletionsApi().streamSimple(piModel, providerContext, {
       // Bearer ONLY when the route's key env resolves non-empty; otherwise
       // the sentinel key + nulled Authorization header send NO auth header
       // (see module docblock).

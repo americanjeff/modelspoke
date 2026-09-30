@@ -172,7 +172,10 @@ boots (its `modelspoke:` section lands in this entry, then the file is
 renamed `settings.yaml.imported`), so an existing configuration migrates by
 itself.
 
-A provider with no `models:` list serves its **full catalog** as discovered;
+A **newly added** provider starts serving **nothing** (`models: "none"` —
+configured but empty) until you add models; it does not serve the full
+catalog on connect. A provider with no `models:` list serves its **full
+catalog** as discovered;
 the first edit to such a provider (removing a row, adding a model, changing a
 field) materializes the list from the fetched catalog and then applies the
 edit. Untouched providers round-trip byte-for-byte.

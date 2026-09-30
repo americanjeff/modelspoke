@@ -43,9 +43,11 @@ import type {
   AssistantMessage as PiAssistantMessage,
   Context as PiContext,
   ImageContent,
+  JsonObject,
   Message as PiMessage,
   TextContent,
   Tool as PiTool,
+  TranscriptContext as PiTranscriptContext,
   Usage as PiUsage,
 } from "@earendil-works/pi-ai";
 import {
@@ -178,11 +180,11 @@ function neutralAssistant(message: Message, options: GenerateOptions): PiAssista
         // takes a parsed object. A malformed stored argument degrades to {}
         // rather than failing the request (the call itself is what the model
         // already emitted — its result is already in the history).
-        let argumentsObject: Record<string, unknown> = {};
+        let argumentsObject: JsonObject = {};
         try {
           const parsed: unknown = JSON.parse(block.arguments);
           if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
-            argumentsObject = parsed as Record<string, unknown>;
+            argumentsObject = parsed as JsonObject;
           }
         } catch {
           // keep {}
@@ -334,4 +336,28 @@ function toPiTool(tool: ToolSchema): PiTool {
     // structurally as typebox's TSchema (both are JSON-Schema-shaped).
     parameters: tool.parameters as PiTool["parameters"],
   };
+}
+
+/**
+ * Bridge the `toPiContext` envelope to the shape the host's pi-ai provider
+ * dispatch expects, across the pi-ai 0.87.1 (dsh 0.2.0-rc.2) contract break.
+ *
+ * pi-ai ≥0.87 derives request tools ONLY from the transcript (system-message
+ * `toolsAdded`) and types `streamSimple` to accept the branded
+ * `TranscriptContext` that only `normalizeContext()` produces; a raw
+ * `{systemPrompt, messages, tools}` envelope silently drops the tool schemas
+ * on the wire (the model then fabricates `<toolcall>` XML as text). pi-ai
+ * <0.87 has no `normalizeContext` and its provider reads `context.tools`
+ * directly — the envelope passes through untouched there. The host resolves
+ * plugin pi-ai imports to its OWN bundled copy (profiles node_modules
+ * interception), so the plugin must adapt to whatever the host ships rather
+ * than pin its own: hence the runtime feature detection instead of a static
+ * named import (a static import would be a link-time failure on hosts still
+ * on 0.85.x, e.g. dsh 0.2.0-rc.1).
+ */
+export async function toProviderContext(context: PiContext): Promise<PiTranscriptContext> {
+  const { normalizeContext } = await import("@earendil-works/pi-ai");
+  return typeof normalizeContext === "function"
+    ? normalizeContext(context)
+    : (context as unknown as PiTranscriptContext);
 }

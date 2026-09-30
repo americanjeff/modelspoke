@@ -1,6 +1,6 @@
 {
   "name": "modelspoke",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "license": "MIT",
   "description": "Configure local models and providers with auto-discovery of reasoning effort, image input and context size.",
   "author": "American Jeff <jeff@americanjeff.com>",
@@ -107,7 +107,7 @@
     "@deepseek-ai/dsh-client-ui-slots": "alpha",
     "@deepseek-ai/dsh-llm": "alpha",
     "@deepseek-ai/schemastery": "^3.18.4",
-    "@earendil-works/pi-ai": "^0.85.1",
+    "@earendil-works/pi-ai": "^0.87.1",
     "@types/node": "^22.0.0",
     "@types/react": "~18.3.1",
     "@types/react-dom": "~18.3.7",

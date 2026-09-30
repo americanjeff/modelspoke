@@ -513,6 +513,8 @@ modelspoke:
                                       # the route reads process.env only
       # The route's SERVED SET: one entry per model it serves.
       # Presence in the list = served. Absent / [] = FULL_CATALOG.
+       # models: "none" = EXPLICIT EMPTY (configured, serves NOTHING — a new
+       # provider starts here).
       models:
         - name: qwen3.8-27b   # harness identity (selector key, config key)
           id: qwen3.8-27b-6000pro   # wire id (what dispatches)
@@ -544,6 +546,11 @@ modelspoke:
   Duplicate wire ids are legal (named variants); a missing `name` normalizes
   to the `id` (harness-id stability across the model-identity migration). Absent/`[]` =
   FULL_CATALOG (serve the whole discovered catalog, harness id = wire id);
+   `models: "none"` = EXPLICIT EMPTY (configured, serves NOTHING — the
+   in-memory empty list; a NEW PROVIDER starts here, so connecting a
+   provider adds no routes until a model is added). The three states are
+   distinct: FULL_CATALOG serves everything, EXPLICIT EMPTY serves nothing,
+   and an EXPLICIT list serves exactly its entries.
   the first EDIT of a FULL_CATALOG route (remove a row, add a non-catalog id,
   or edit a row's config) materializes it to EXPLICIT — `models` seeded from
   the fetched catalog (each `{name: id, id, …legacy per-wire-id config}`),

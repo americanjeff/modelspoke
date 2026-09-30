@@ -6,7 +6,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { ToolCallId, createMessage, createToolResultMessage, createUserMessage, ReasoningEffortId } from "@deepseek-ai/dsh-llm";
+import { ToolCallId, createMessage, createToolResultMessage, createUserMessage, createSystemMessage, ReasoningEffortId } from "@deepseek-ai/dsh-llm";
 import type { GenerateOptions, ImageBlock, Message, StreamChunk } from "@deepseek-ai/dsh-llm";
 import { attributionHeaders } from "@deepseek-ai/dsh-llm";
 import { ModelspokeAdapter } from "../src/dsh/adapter.js";
@@ -422,6 +422,68 @@ describe("wire capture — attribution + auth + chat_template_kwargs", () => {
       const toolResultMsg = messages.find((m) => m.role === "tool");
       expect(toolResultMsg).toBeDefined();
       expect(toolResultMsg!.tool_call_id).toBe("call-1");
+    } finally {
+      delete process.env[KEY_ENV];
+    }
+  });
+});
+
+describe("wire capture — tool schemas (pi-ai ≥0.87 transcript contract)", () => {
+  // Regression for the dsh 0.2.0-rc.2 / pi-ai 0.87.1 break: the host now
+  // routes plugins to its own pi-ai, whose openai-completions provider reads
+  // request tools ONLY from the transcript (system-message toolsAdded) and
+  // silently drops the top-level context.tools envelope. Without the
+  // normalizeContext bridge the tool schemas never cross the wire and the
+  // model fabricates <toolcall> XML as plain text (session 7ae9e6f6, changestab).
+  const TOOLS = [
+    {
+      name: "bash",
+      description: "Run a shell command.",
+      parameters: { type: "object", properties: { command: { type: "string" } }, required: ["command"] },
+    },
+    {
+      name: "read",
+      description: "Read a file.",
+      parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
+    },
+  ];
+
+  it("tool schemas cross the wire on a loop-built request (leading system message)", async () => {
+    process.env[KEY_ENV] = "dummy";
+    try {
+      const route: RouteSpec = { name: "wire-tools", apiKeyEnv: KEY_ENV };
+      const req = await runRoute(route, "medium", {
+        messages: [
+          createSystemMessage("You are a coding agent. Use tools to answer."),
+          createUserMessage({ content: [{ type: "text", text: "List the files in the current directory." }], source: { kind: "user" } }),
+        ],
+        tools: TOOLS,
+      });
+      const tools = req.body.tools as Array<{ type?: string; function?: { name?: string; parameters?: unknown } }> | undefined;
+      expect(Array.isArray(tools)).toBe(true);
+      expect(tools!.map((t) => t.function?.name).sort()).toEqual(["bash", "read"]);
+      const bash = tools!.find((t) => t.function?.name === "bash");
+      expect(bash?.type).toBe("function");
+      expect(bash?.function?.parameters).toMatchObject({
+        type: "object",
+        required: ["command"],
+      });
+    } finally {
+      delete process.env[KEY_ENV];
+    }
+  });
+
+  it("tool schemas cross the wire on a one-shot request (options.system slot)", async () => {
+    process.env[KEY_ENV] = "dummy";
+    try {
+      const route: RouteSpec = { name: "wire-tools-one", apiKeyEnv: KEY_ENV };
+      const req = await runRoute(route, "medium", {
+        system: "You are a coding agent.",
+        tools: TOOLS,
+      });
+      const tools = req.body.tools as Array<{ function?: { name?: string } }> | undefined;
+      expect(Array.isArray(tools)).toBe(true);
+      expect(tools!.map((t) => t.function?.name).sort()).toEqual(["bash", "read"]);
     } finally {
       delete process.env[KEY_ENV];
     }

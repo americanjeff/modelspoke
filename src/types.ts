@@ -228,11 +228,13 @@ export interface DiscoveryModelInfo {
  *
  * `models`: the route's SERVED SET, normalized by the lenient reader
  * (src/overrides.ts `decodeRouteModels`):
- * - `models: ModelEntry[]` (possibly empty) — the EXPLICIT served set: one
- *   entry per `{ name, id, …config }`. Presence in the list IS the served
- *   state (the allow-list filter is retired — there is no longer a
- *   "filter on the catalog" state to express; an entry may name a wire id
- *   the endpoint does not currently serve, and it is offered anyway).
+ * - `models: ModelEntry[]` — the EXPLICIT served set: one entry per
+ *   `{ name, id, …config }`. Presence in the list IS the served state (the
+ *   allow-list filter is retired — there is no longer a "filter on the
+ *   catalog" state to express; an entry may name a wire id the endpoint
+ *   does not currently serve, and it is offered anyway). The list may be
+ *   EMPTY (EXPLICIT EMPTY — configured, serves nothing; the stored `"none"`
+ *   sentinel; a new provider starts here).
  * - `models: null` — FULL_CATALOG: serve the whole discovered endpoint
  *   catalog. `legacyOverrides` then carries the per-wire-id config (the old
  *   `routes[].overrides` map, passed through raw).
@@ -250,7 +252,8 @@ export interface ModelspokeRoute {
   /** Env var name holding the Bearer key; Bearer sent only when set. */
   apiKeyEnv?: string;
   /**
-   * The route's served set: the EXPLICIT entry list, or `null` =
+   * The route's served set: the EXPLICIT entry list (possibly empty = serves
+   * nothing — the stored `"none"` sentinel), or `null` =
    * FULL_CATALOG (serve the whole endpoint catalog). The lenient reader
    * always sets it (array or null); the two writers keep the stored shape
    * byte-stable (src/overrides.ts `storeRoute`).

@@ -4,6 +4,27 @@ Coarse and consumer-facing — the kind of thing a dsh user or a `./lib`
 consumer can act on. Build-internal work (tests, comments, docs) does not
 belong here.
 
+## 0.3.2 — 2026-09-29
+
+- **Fixed: deleting every model row no longer flips a provider to serving
+  its whole catalog** — removing all rows and hitting Apply used to store
+  the route with no `models:` list, which reads back as "serve the full
+  catalog": the card re-populated with every model from the provider. An
+  empty list is now a real, stored state (`models: "none"` — configured,
+  serves nothing) and stays empty across reopens. Hand-edited `models: []`
+  or absent `models:` still mean the full catalog, as before.
+- **A new provider starts empty** — connecting a provider no longer
+  immediately serves (and, after the first edit, routes) every model in
+  its catalog. The new provider is configured but serves nothing until you
+  add models; the catalog remains visible in the card to add from.
+- **Fixed: tool calls silently broken on dsh 0.2.0-rc.2** — the host's
+  pi-ai ≥0.87 (bundled with dsh 0.2.0-rc.2) reads request tools only from
+  its new transcript context shape; modelspoke's envelope dropped the tool
+  schemas from the wire, and the model answered with literal `<toolcall>`
+  XML text instead of calling tools. modelspoke now folds its context
+  through the host's shape when it is present — older hosts (dsh 0.1.7)
+  are unaffected.
+
 ## 0.3.1 — 2026-09-27
 
 - **Fixed: the session now gets the capabilities the provider card already
