@@ -1,0 +1,38 @@
+# Trusted-publishing pattern: one self-contained file per repo, identical
+# across projects except where noted. The npm trust record (npmjs.com →
+# package → Settings → Trusted publishing → GitHub Actions) must name this
+# exact file; publish runs on tag push only.
+name: Publish
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  id-token: write  # required for OIDC (npm trusted publishing)
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false  # never use caching in release builds
+      - name: Check tag matches package version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$version" ]; then
+            echo "::error::tag v$tag does not match package.json version $version"
+            exit 1
+          fi
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      # No NPM_TOKEN: the npm CLI exchanges this run's OIDC token, and the
+      # publish carries Sigstore provenance. Scoped packages: --access public.
+      # Projects with a build step: add it between install and publish.
+      - run: npm publish

@@ -260,7 +260,6 @@ const EMPTY_LOCALE_SNAPSHOT: ConfigFormSnapshot<LocaleSection> = {
   user: undefined,
   revision: undefined,
   writable: false,
-  mode: "memory",
 };
 
 /** The client has no logger service (the node half's `ctx.logger` is not on

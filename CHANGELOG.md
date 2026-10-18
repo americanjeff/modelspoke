@@ -4,6 +4,16 @@ Coarse and consumer-facing — the kind of thing a dsh user or a `./lib`
 consumer can act on. Build-internal work (tests, comments, docs) does not
 belong here.
 
+## 0.3.3 — 2026-10-18
+
+- **Rebuilt and re-verified against the dsh 0.2.1 host line** — modelspoke
+  now builds on the 0.2.1 types and is e2e-verified on a live 0.2.1-rc.2
+  host. The one 0.2.1 contract change consumed: the host's
+  `ConfigFormSnapshot.mode` field ('host' | 'memory') is gone — remote
+  browsers persist preferences to the Host now, and a read-only form is
+  expressed by `writable: false` alone — so the client's locale fallback
+  snapshot drops the field. No behavior change.
+
 ## 0.3.2 — 2026-09-29
 
 - **Fixed: deleting every model row no longer flips a provider to serving

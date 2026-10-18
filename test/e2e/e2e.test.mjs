@@ -24,7 +24,7 @@ const LLSWAP_BIN = process.env.E2E_LLAMA_SWAP || "llama-swap";
 
 // The e2e selectors ride on dsh's own web UI, so a dsh bump can break them
 // silently — fail loud at the boundary (filestab's same guard).
-const DSH_VERSION = "0.2.0-rc.2";
+const DSH_VERSION = "0.2.1-rc.2";
 
 // The agent loop's system prompt opens with this — the discriminator for
 // the MAIN turn's request in the fake backend's log (the session-title
