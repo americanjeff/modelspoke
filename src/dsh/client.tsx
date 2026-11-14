@@ -827,6 +827,25 @@ const ms = {
     flexDirection: "column",
     gap: 2,
   },
+  /** The model list's column headings: a flex row aligned with the
+   *  modelRow's columns — the two labels share the row's `1 1 auto` split
+   *  (same gap), and the spacer reserves the chevron + remove controls'
+   *  footprint (24 + 24 + 2×10 gaps) so the headings sit over the name /
+   *  id columns. The `0 10px` padding mirrors the row's horizontal inset. */
+  modelColsHead: {
+    display: "flex",
+    alignItems: "baseline",
+    gap: 10,
+    padding: "0 10px",
+  },
+  modelColLabel: {
+    flex: "1 1 auto",
+    minWidth: 0,
+    fontSize: 12,
+    lineHeight: "18px",
+    color: "var(--dsw-alias-label-tertiary)",
+  },
+  modelColsSpacer: { flex: "none", width: 58 },
   /** The card's model row: one inset pill (the spec's row grammar):
    *  [ name (col 1, mono, editable) ][ id (col 2, wire — combobox) ][ >
    *  chevron (config detail) ][ − remove ]. Presence in the list IS the
@@ -3698,7 +3717,19 @@ export function apply(ctx: ClientContext): void {
                               ) : null}
                               {(cardCatalog === null || cardCatalog.status !== "loading") &&
                               cardRows.length > 0 ? (
-                                <ul style={ms.modelList}>
+                                <>
+                                  {/* Column headings over the row grid
+                                      (same condition as the list below). */}
+                                  <div style={ms.modelColsHead}>
+                                    <span style={ms.modelColLabel}>
+                                      {t(locale, "colModelName")}
+                                    </span>
+                                    <span style={ms.modelColLabel}>
+                                      {t(locale, "colModelId")}
+                                    </span>
+                                    <span style={ms.modelColsSpacer} />
+                                  </div>
+                                  <ul style={ms.modelList}>
                                   {cardRows.map((row, index) => {
                                     const rowName = row.name;
                                     // The row's STABLE slot key (the fallback
@@ -3761,7 +3792,8 @@ export function apply(ctx: ClientContext): void {
                                       />
                                     );
                                   })}
-                                </ul>
+                                  </ul>
+                                </>
                               ) : null}
                               {/* The dashed Add-model slot (bottom):
                                   appends an empty row (the pure

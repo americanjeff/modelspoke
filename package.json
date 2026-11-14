@@ -1,8 +1,9 @@
 {
   "name": "modelspoke",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "license": "MIT",
   "description": "Configure local models and providers with auto-discovery of reasoning effort, image input and context size.",
+  "icon": "assets/logo/modelspoke-icon.png",
   "author": "American Jeff <jeff@americanjeff.com>",
   "homepage": "https://github.com/americanjeff/modelspoke",
   "repository": {
@@ -116,5 +117,8 @@
     "tsdown": "^0.22.2",
     "typescript": "^5.9.3",
     "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "undici": "^8.12.4"
   }
 }

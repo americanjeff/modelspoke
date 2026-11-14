@@ -6,7 +6,7 @@
  *   endpoint does not currently serve is still offered), or one row per
  *   DISCOVERED catalog model on a FULL_CATALOG route;
  * - resolveModel takes the harness identity (entry name / wire id) and
- *   dispatches on the WIRE id (unknown entry name → NO_MODEL; the FULL_CATALOG
+ *   dispatches on the WIRE id (unknown entry name → UNKNOWN_MODEL; the FULL_CATALOG
  *   served set is open);
  * - the entry's own config is tier 1 (beats discovery);
  * - effort is pi-parity: the per-model `defaultEffort` (explicit entry or
@@ -128,15 +128,15 @@ describe("resolveModel — the harness-identity dispatch", () => {
     expect(info.context?.contextWindow).toBe(12345);
   });
 
-  it("EXPLICIT: an unknown entry name is a NO_MODEL rejection (the served set is closed)", async () => {
+  it("EXPLICIT: an unknown entry name is an UNKNOWN_MODEL rejection (the served set is closed)", async () => {
     const adapter = makeAdapter({ models: [{ name: "A", id: FLAGSHIP }] });
     await expect(adapter.resolveModel("ms", "nope")).rejects.toMatchObject({
-      code: "NO_MODEL",
+      code: "UNKNOWN_MODEL",
     });
     // The wire id of a served entry is NOT a requestable identity either
     // (only the harness name is — the wire id is dispatch plumbing).
     await expect(adapter.resolveModel("ms", FLAGSHIP)).rejects.toMatchObject({
-      code: "NO_MODEL",
+      code: "UNKNOWN_MODEL",
     });
   });
 
@@ -246,7 +246,7 @@ describe("defaultEffort — the determinable per-model default (pi parity)", () 
 });
 
 describe("LlmError contract", () => {
-  it("NO_MODEL is a LlmError (the runtime's taxonomy)", async () => {
+  it("UNKNOWN_MODEL is a LlmError (the runtime's taxonomy)", async () => {
     const adapter = makeAdapter({ models: [{ name: "A", id: FLAGSHIP }] });
     const error: unknown = await adapter
       .resolveModel("ms", "nope")
@@ -257,7 +257,7 @@ describe("LlmError contract", () => {
         (err) => err,
       );
     expect(error).toBeInstanceOf(LlmError);
-    expect((error as LlmError).code).toBe("NO_MODEL");
+    expect((error as LlmError).code).toBe("UNKNOWN_MODEL");
   });
 });
 

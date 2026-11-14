@@ -15,5 +15,6 @@ REVIEW-0.1.0.md
 .vitest-cache/
 .pnpm-store/
 *.tgz
+.e2e/
 e2e-failure.png
 BUGS.md

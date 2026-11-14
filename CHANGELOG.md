@@ -4,6 +4,20 @@ Coarse and consumer-facing — the kind of thing a dsh user or a `./lib`
 consumer can act on. Build-internal work (tests, comments, docs) does not
 belong here.
 
+## 0.4.0 — 2026-11-13
+
+- **Fixed: slow local models no longer time out after 5 minutes of
+  silence** — a model response that sends no body bytes for 5 minutes
+  (cold model load + large prefill, or a llama-swap request queued
+  server-side) used to die with a body-timeout error and burn the full
+  retry budget. Model-provider requests now tolerate 30 minutes between
+  chunks; bytes flowing = no timeout, only a genuinely stalled backend
+  trips it.
+- **The unknown-model failure code is now `UNKNOWN_MODEL`** (was
+  `NO_MODEL`) — matching the current dsh host's error taxonomy.
+- The settings card's model list has **"Model Name" / "Model-ID" column
+  headings**, and the package declares its plugin icon.
+
 ## 0.3.3 — 2026-10-18
 
 - **Rebuilt and re-verified against the dsh 0.2.1 host line** — modelspoke

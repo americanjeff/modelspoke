@@ -252,6 +252,14 @@ const STRINGS = {
     en: "Models",
     zh: "模型",
   },
+  colModelName: {
+    en: "Model Name",
+    zh: "模型名称",
+  },
+  colModelId: {
+    en: "Model-ID",
+    zh: "模型 ID",
+  },
   countFetching: {
     en: "fetching the catalog…",
     zh: "正在获取目录…",

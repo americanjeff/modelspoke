@@ -30,6 +30,7 @@ import type {
 import type { Model as PiModel, ModelThinkingLevel } from "@earendil-works/pi-ai";
 import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
 import { clampThinkingLevel } from "@earendil-works/pi-ai";
+import { Agent as UndiciAgent, fetch as undiciFetch } from "undici";
 import { discoveryBackends } from "../discovery/backends.js";
 import type { DiscoveryContext } from "../discovery/backends.js";
 import { fetchModels } from "../discovery/client.js";
@@ -60,6 +61,32 @@ import {
 } from "./pi-model.js";
 import { toReplayEnvelope } from "./replay.js";
 import { defaultEffortForRoute, overrideForRoute, routesOf } from "./settings.js";
+
+/**
+ * Model-provider fetch transport (BUG-034 class fix).
+ *
+ * Node's built-in fetch applies undici's default `bodyTimeout` of 300 s: a
+ * model response that delivers no body bytes for 5 minutes dies with
+ * `terminated: Body Timeout Error (UND_ERR_BODY_TIMEOUT)` (code TIMEOUT) —
+ * and on dsh-llm-retry's retryable list, so a slow arm burns 5 × 300 s before
+ * the turn fails. Local serving legitimately exceeds 300 s of silence:
+ * cold model load + large prefill on an offload arm, or llama-swap QUEUEING
+ * the request server-side (headers sent, body held until a model slot
+ * frees). Route provider requests through an explicit dispatcher with a
+ * 30-minute inter-chunk tolerance instead — streaming semantics: bytes
+ * flowing = no timeout; only a genuinely stalled backend trips it.
+ * Cancellation stays with the caller's signal (`signal: upstream`).
+ */
+const MODEL_DISPATCHER = new UndiciAgent({ bodyTimeout: 1_800_000 });
+// undici's Request/Response types are structurally close to but not identical
+// with the DOM fetch types pi-ai's `options.fetch` expects — the runtime
+// objects are compatible (undici's fetch IS a fetch implementation), so the
+// boundary is typed loose and asserted once here.
+const modelFetch = ((url: unknown, init?: unknown) =>
+  undiciFetch(url as Parameters<typeof undiciFetch>[0], {
+    ...(init as Record<string, unknown>),
+    dispatcher: MODEL_DISPATCHER,
+  })) as unknown as typeof fetch;
 
 /** The reportable fields, in canonical order (log line + description). */
 const REPORT_FIELDS = [
@@ -343,7 +370,8 @@ export class ModelspokeAdapter extends LlmAdapter {
     if (entry === undefined) {
       throw new LlmError(
         `modelspoke: route "${route.name}" serves no model named "${model}"`,
-        "NO_MODEL",
+        // rc.3 renamed this failure code (was NO_MODEL in rc.2's dsh-llm).
+        "UNKNOWN_MODEL",
       );
     }
     return {
@@ -620,6 +648,15 @@ export class ModelspokeAdapter extends LlmAdapter {
     // rebuild from live settings.
     const piModel = generation.piModel;
     const piStream = openAICompletionsApi().streamSimple(piModel, providerContext, {
+      // Model-provider transport (BUG-034 class): Node's built-in fetch kills
+      // any request whose inter-chunk gap exceeds its default undici
+      // bodyTimeout of 300s (`UND_ERR_BODY_TIMEOUT`) — fatal on slow local
+      // arms where TTFT legitimately exceeds it (cold load + big prefill) or
+      // where llama-swap QUEUES the request server-side (headers sent, body
+      // held until a model slot frees). Dispatch through an explicit undici
+      // dispatcher with a 30-minute inter-chunk tolerance instead; stream
+      // cancellation stays with `signal: upstream` (the harness owns abort).
+      fetch: modelFetch,
       // Bearer ONLY when the route's key env resolves non-empty; otherwise
       // the sentinel key + nulled Authorization header send NO auth header
       // (see module docblock).
